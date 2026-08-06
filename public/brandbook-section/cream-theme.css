@@ -1,0 +1,125 @@
+:root {
+  --brandbook-cream: #efede0;
+  --brandbook-cream-light: #f7f4e8;
+  --brandbook-forest: #1f3a27;
+}
+
+html,
+body,
+#glworld,
+.gl-loading,
+.gl-white {
+  background-color: var(--brandbook-cream);
+}
+
+.gl-loading,
+.gl-white {
+  display: none !important;
+}
+
+body {
+  color: var(--brandbook-forest);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.brandbook-cream-wash {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: rgba(239, 237, 224, .04);
+  mix-blend-mode: soft-light;
+}
+
+.gl-info {
+  z-index: 1;
+}
+
+.gl-scroll-btn {
+  color: var(--brandbook-cream-light);
+  background-color: var(--brandbook-forest);
+}
+
+.gl-scroll-btnCircle {
+  background-color: var(--brandbook-cream-light);
+}
+
+.gl-hp-btn,
+.gl-info-0,
+.gl-info-ring,
+.gl-info-ring-L,
+.gl-info-ring-R,
+.gl-info-6b,
+.gl-pageNumIn,
+.gl-loadingIn {
+  color: var(--brandbook-forest);
+}
+
+.gl-hp-btnCircle,
+.gl-page-sl {
+  background-color: var(--brandbook-forest);
+}
+
+.gl-pageNum {
+  background-color: rgba(239, 237, 224, .9);
+  border-color: rgba(31, 58, 39, .16);
+}
+
+.gl-page-ringCircle {
+  stroke: var(--brandbook-forest);
+}
+
+.gl-info-block,
+.gl-info-6 {
+  color: var(--brandbook-forest);
+}
+
+.gl-glow1,
+.gl-glow2,
+.gl-glow3,
+.gl-glow4,
+.gl-glow5 {
+  filter: drop-shadow(1px 1px 7px rgba(31, 58, 39, .22));
+}
+
+.brandbook-title-word {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: clamp(52px, 10.5vw, 202px);
+  font-weight: 900;
+  line-height: .82;
+  letter-spacing: -.075em;
+  text-indent: -.075em;
+  white-space: nowrap;
+}
+
+.gl-info-ringSpan {
+  font-weight: 900;
+}
+
+.gl-hp-btn {
+  font-family: Arial, Helvetica, sans-serif;
+  border: 0;
+  cursor: pointer;
+}
+
+@media screen and (max-width: 600px) and (orientation: portrait) {
+  .brandbook-title-word {
+    font-size: clamp(36px, 12.8vw, 58px);
+    letter-spacing: -.065em;
+  }
+
+  .gl-info-base {
+    padding-inline: 5vw;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
