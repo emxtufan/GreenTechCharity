@@ -1,7 +1,49 @@
+/* The intro's own two faces, declared by URL rather than by local() so they
+   resolve here too. Both cover A-Z, 0-9 and Â/Î; only Ă/Ș/Ț are missing from
+   the subsets, and this section's copy carries no diacritics. */
+@font-face {
+  font-family: BrandbookDisplay;
+  src: url('/ITCGaramondStd-LtCond-32R5CTWO.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: BrandbookText;
+  src: url('/HelveticaNeueLTStd-Lt-VCAZILVV.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: BrandbookText;
+  src: url('/HelveticaNeueLTStd-Bd-IE5H5EVH.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: BrandbookText;
+  src: url('/HelveticaNeueLTStd-It-RKXTT2QQ.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
 :root {
   --brandbook-cream: #efede0;
   --brandbook-cream-light: #f7f4e8;
   --brandbook-forest: #1f3a27;
+  /* greener than the base forest, for the stage-1 composition */
+  --bb-ink: #14512f;
+  --bb-green: #2f8049;
+  --bb-muted: #5a6b5e;
+  /* named to echo the intro: Garamond sets the display, Helvetica the copy */
+  --brandbook-display: BrandbookDisplay, Garamond, 'ITC Garamond Std Light Cond', Georgia, serif;
+  --brandbook-text: BrandbookText, Helvetica, 'Helvetica Neue', system-ui, sans-serif;
 }
 
 html,
@@ -19,7 +61,24 @@ body,
 
 body {
   color: var(--brandbook-forest);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--brandbook-text);
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* These blocks break only at their own <br>, so never touch text-wrap here:
+   text-wrap resets text-wrap-mode and would defeat the white-space: nowrap
+   the layout depends on. Only the rhythm within those fixed lines is ours. */
+.gl-info-0-1,
+.gl-info-0-2,
+.gl-info-6-1,
+.gl-info-6-2,
+.gl-info-6b-1,
+.gl-info-6b-2 {
+  font-weight: 400;
+  line-height: 1.75;
+  letter-spacing: .02em;
 }
 
 .brandbook-cream-wash {
@@ -82,39 +141,232 @@ body {
   filter: drop-shadow(1px 1px 7px rgba(31, 58, 39, .22));
 }
 
+/* The poster words, set the way the intro sets its titles: Garamond Light
+   Condensed, large and open, instead of a crushed black grotesque. */
 .brandbook-title-word {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 100%;
   height: 100%;
-  font-family: Arial, Helvetica, sans-serif;
-  font-size: clamp(52px, 10.5vw, 202px);
-  font-weight: 900;
-  line-height: .82;
-  letter-spacing: -.075em;
-  text-indent: -.075em;
+  font-family: var(--brandbook-display);
+  font-size: clamp(72px, 14.4vw, 248px);
+  font-weight: 400;
+  line-height: .86;
+  letter-spacing: .004em;
+  font-feature-settings: 'ss01' 1;
   white-space: nowrap;
 }
 
+/* ── Stage 1 composition ────────────────────────────────────────────────────
+   Mixed scale within one thought: an elegant serif for the soft words, a
+   condensed uppercase for the statements, one phrase reversed out of a solid
+   green block. Ornaments are inline SVG so they take currentColor. */
+.bb-set {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: .18em;
+  line-height: 1.1;
+}
+
+.bb-set--ruled {
+  position: relative;
+  padding-left: 1.15em;
+}
+
+.bb-set--ruled::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: .18em;
+  width: 2px;
+  height: 3.4em;
+  background: var(--bb-ink);
+  opacity: .55;
+}
+
+.bb-script {
+  font-family: var(--brandbook-display);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 2.7em;
+  line-height: .95;
+  letter-spacing: .01em;
+  color: var(--bb-green);
+}
+
+.bb-strong {
+  display: inline-block;
+  font-family: var(--brandbook-text);
+  font-weight: 700;
+  font-size: 2.05em;
+  line-height: 1;
+  letter-spacing: .008em;
+  text-transform: uppercase;
+  color: var(--bb-ink);
+  transform: scaleX(.88);
+  transform-origin: left center;
+}
+
+.bb-strong--accent {
+  color: var(--bb-green);
+}
+
+.bb-quiet {
+  display: flex;
+  align-items: center;
+  gap: .45em;
+  font-family: var(--brandbook-text);
+  font-weight: 400;
+  font-size: 1.08em;
+  letter-spacing: .015em;
+  color: var(--bb-ink);
+  margin-top: .35em;
+}
+
+.bb-quiet--caps {
+  text-transform: uppercase;
+  font-size: 1.12em;
+  letter-spacing: .07em;
+  color: var(--bb-muted);
+  margin-top: .5em;
+}
+
+.bb-badge {
+  align-self: flex-start;
+  margin-top: .3em;
+  padding: .34em .78em .38em;
+  background: var(--bb-green);
+  color: var(--brandbook-cream-light);
+  font-family: var(--brandbook-text);
+  font-weight: 400;
+  font-size: 1.12em;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+
+.bb-emblem {
+  display: flex;
+  align-items: center;
+  gap: .5em;
+  margin-bottom: .35em;
+  color: var(--bb-ink);
+}
+
+.bb-rule {
+  display: block;
+  width: 7.5em;
+  height: 2px;
+  background: currentColor;
+  opacity: .75;
+}
+
+.bb-rule--tail {
+  display: inline-block;
+  width: 3.2em;
+  margin-left: .35em;
+  vertical-align: .28em;
+  opacity: .6;
+}
+
+.bb-script--tailed {
+  white-space: nowrap;
+}
+
+.bb-mark {
+  display: block;
+  fill: currentColor;
+}
+
+.bb-mark--leaf {
+  width: 1.5em;
+  height: 1.5em;
+  color: var(--bb-green);
+}
+
+.bb-mark--house {
+  width: 2em;
+  height: 1.6em;
+  fill: none;
+}
+
+.bb-mark--house .bb-heart {
+  fill: #d8b98a;
+  stroke: none;
+}
+
+/* The lead line under each poster word. The original set it at weight 900;
+   hierarchy here comes from size and family instead. */
+.gl-info-m {
+  font-family: var(--brandbook-display);
+  font-weight: 400;
+  font-size: clamp(26px, 3.1vw, 54px);
+  line-height: 1.06;
+  letter-spacing: .002em;
+  font-feature-settings: 'ss01' 1;
+  opacity: .92;
+}
+
+/* The running paragraph. It was weight 700 — body copy has no business being
+   bold, and that is most of what read as heavy-handed. */
+.gl-info-base {
+  font-family: var(--brandbook-text);
+  font-weight: 400;
+  font-size: clamp(14px, 1.05vw, 19px);
+  line-height: 1.85;
+  letter-spacing: .015em;
+  margin-top: 1.1em;
+  opacity: .88;
+}
+
+/* Small labels: opened with tracking rather than weight. */
+.gl-info-ring {
+  font-weight: 400;
+  letter-spacing: .05em;
+  line-height: 2;
+}
+
 .gl-info-ringSpan {
-  font-weight: 900;
+  font-weight: 700;
+  letter-spacing: .02em;
+}
+
+.gl-pageNumIn {
+  font-weight: 400;
+  letter-spacing: .06em;
+}
+
+.gl-scroll-btn {
+  font-weight: 400;
+  letter-spacing: .05em;
 }
 
 .gl-hp-btn {
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--brandbook-text);
+  font-weight: 700;
+  letter-spacing: .03em;
   border: 0;
   cursor: pointer;
 }
 
 @media screen and (max-width: 600px) and (orientation: portrait) {
   .brandbook-title-word {
-    font-size: clamp(36px, 12.8vw, 58px);
-    letter-spacing: -.065em;
+    font-size: clamp(52px, 18vw, 84px);
+    letter-spacing: .006em;
   }
 
   .gl-info-base {
     padding-inline: 5vw;
+  }
+
+  .gl-info-0-1,
+  .gl-info-0-2,
+  .gl-info-6-1,
+  .gl-info-6-2,
+  .gl-info-6b-1,
+  .gl-info-6b-2 {
+    line-height: 1.6;
   }
 }
 

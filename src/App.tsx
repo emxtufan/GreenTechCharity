@@ -5,6 +5,10 @@ type GreencubeScrollProgress = {
   settled: number;
   progress: number;
   animating: boolean;
+  orbitTarget?: number;
+  orbit?: number;
+  entryTarget?: number;
+  entry?: number;
 };
 
 type PortalAnchor = {
@@ -21,9 +25,15 @@ type BrandbookMessage = {
 
 type SectionPhase = 'house' | 'entering' | 'active' | 'leaving';
 
-const FIRST_LEG_MS = 850;
-const SECOND_LEG_MS = 1200;
-const RETURN_MS = 1550;
+// The scroll cascade (zoom -> orbit -> entry) is the only clock: the mask and
+// the 3D camera both read the same `entry` value, so they cannot drift apart.
+const ENTRY_EPSILON = 0.002;
+const ENTRY_SETTLED = 0.985;
+const PORTAL_OPEN_FROM = 0.3;
+const PORTAL_OPEN_TO = 0.6;
+const FRAME_BLEND_FROM = 0.35;
+const FRAME_BLEND_TO = 0.95;
+const PORTAL_COVER_FROM = 0.9;
 
 const clamp = (value: number, min = 0, max = 1) => Math.min(max, Math.max(min, value));
 
@@ -32,9 +42,6 @@ const smoothstep = (start: number, end: number, value: number) => {
   return amount * amount * (3 - 2 * amount);
 };
 
-const easeInOutCubic = (value: number) =>
-  value < 0.5 ? 4 * value * value * value : 1 - Math.pow(-2 * value + 2, 3) / 2;
-
 export default function App() {
   const [showScrollHint, setShowScrollHint] = useState(false);
   const [sectionPhase, setSectionPhase] = useState<SectionPhase>('house');
@@ -42,19 +49,9 @@ export default function App() {
   const brandbookReady = useRef(false);
   const brandbookFrameElement = useRef<HTMLIFrameElement>(null);
   const brandbookSectionElement = useRef<HTMLElement>(null);
-  const transitionFrame = useRef<number | undefined>(undefined);
-  const transitionToken = useRef(0);
-  const transitionProgress = useRef(0);
-  const wasAtScrollEnd = useRef(false);
-  const waitingForBrandbook = useRef<(() => void) | null>(null);
+  const entryProgress = useRef(0);
   const portalAnchor = useRef<PortalAnchor>({x: 0.5, y: 0.5, radius: 180});
   const childRingAnchor = useRef<PortalAnchor>({x: 0.5, y: 0.5, radius: 180});
-  const progress = useRef<GreencubeScrollProgress>({
-    target: 0,
-    settled: 0,
-    progress: 0.5,
-    animating: true,
-  });
 
   useEffect(() => {
     void import('./greencube-runtime.js');
@@ -123,130 +120,86 @@ export default function App() {
     const height = window.innerHeight;
     const parentRing = portalAnchor.current;
     const childRing = childRingAnchor.current;
-    const amount = transitionProgress.current;
-    const reveal = smoothstep(0.46, 0.98, amount);
-    const portalX = clamp(parentRing.x, 0.05, 0.95) * width;
-    const portalY = clamp(parentRing.y, 0.05, 0.95) * height;
+    const amount = entryProgress.current;
+    const active = sectionPhaseRef.current === 'active';
+
+    const portalX = clamp(parentRing.x, -1, 2) * width;
+    const portalY = clamp(parentRing.y, -1, 2) * height;
     const farthestX = Math.max(portalX, width - portalX);
     const farthestY = Math.max(portalY, height - portalY);
     const coverRadius = Math.hypot(farthestX, farthestY) + 4;
-    const firstRadius = Math.max(8, parentRing.radius * 0.22);
-    const radius = reveal <= 0 ? 0 : firstRadius + (coverRadius - firstRadius) * reveal;
+
+    // The mask is the ring hole: it tracks the projected circle so the section
+    // is literally seen through it, then blends to full cover at the very end
+    // so the viewport corners are guaranteed regardless of projection error.
+    const open = smoothstep(PORTAL_OPEN_FROM, PORTAL_OPEN_TO, amount);
+    const settle = active ? 1 : smoothstep(PORTAL_COVER_FROM, 1, amount);
+    const holeRadius = Math.max(parentRing.radius, 0) * open;
+    const radius = holeRadius + (coverRadius - holeRadius) * settle;
 
     section.style.clipPath = `circle(${radius}px at ${portalX}px ${portalY}px)`;
 
+    // Line the child's own ring up with the hole, then release it to its
+    // natural framing as the hole takes over the viewport.
     const childRadius = Math.max(childRing.radius, 1);
-    const initialScale = clamp(parentRing.radius / childRadius, 0.28, 3.2);
-    const initialX = portalX - childRing.x * width * initialScale;
-    const initialY = portalY - childRing.y * height * initialScale;
-    const frameBlend = smoothstep(0.04, 0.92, reveal);
-    const frameScale = initialScale + (1 - initialScale) * frameBlend;
-    const frameX = initialX * (1 - frameBlend);
-    const frameY = initialY * (1 - frameBlend);
+    // At the head of stage0 the child's ring is large on screen, so the early
+    // alignment scale is much smaller than it was at the parked frame.
+    const alignedScale = clamp(parentRing.radius / childRadius, 0.03, 8);
+    const blend = active ? 1 : smoothstep(FRAME_BLEND_FROM, FRAME_BLEND_TO, amount);
+    const frameScale = alignedScale + (1 - alignedScale) * blend;
+    const frameX = (portalX - childRing.x * width * frameScale) * (1 - blend);
+    const frameY = (portalY - childRing.y * height * frameScale) * (1 - blend);
     frame.style.transform = `translate3d(${frameX}px, ${frameY}px, 0) scale(${frameScale})`;
   }, []);
-
-  const applyTransitionProgress = useCallback(
-    (amount: number) => {
-      const value = clamp(amount);
-      transitionProgress.current = value;
-      renderPortal();
-      window.dispatchEvent(
-        new CustomEvent('greencube:section-transition', {
-          detail: {progress: value, requestAnchor: value > 0 && value < 0.72},
-        }),
-      );
-    },
-    [renderPortal],
-  );
-
-  const animateTo = useCallback(
-    (target: number, duration: number, token: number, onComplete: () => void) => {
-      window.cancelAnimationFrame(transitionFrame.current ?? 0);
-      const startValue = transitionProgress.current;
-      const startTime = performance.now();
-
-      const update = (now: number) => {
-        if (token !== transitionToken.current) return;
-        const elapsed = clamp((now - startTime) / duration);
-        const eased = easeInOutCubic(elapsed);
-        applyTransitionProgress(startValue + (target - startValue) * eased);
-
-        if (elapsed < 1) {
-          transitionFrame.current = window.requestAnimationFrame(update);
-        } else {
-          onComplete();
-        }
-      };
-
-      transitionFrame.current = window.requestAnimationFrame(update);
-    },
-    [applyTransitionProgress],
-  );
-
-  const finishEntry = useCallback(
-    (token: number) => {
-      waitingForBrandbook.current = null;
-      animateTo(1, SECOND_LEG_MS, token, () => {
-        if (token !== transitionToken.current) return;
-        applyTransitionProgress(1);
-        setPhase('active');
-        postToBrandbook('entry-active');
-      });
-    },
-    [animateTo, applyTransitionProgress, postToBrandbook, setPhase],
-  );
-
-  const openBrandbook = useCallback(() => {
-    if (sectionPhaseRef.current !== 'house') return;
-
-    const token = ++transitionToken.current;
-    setShowScrollHint(false);
-    setPhase('entering');
-    postToBrandbook('activate-entry');
-    applyTransitionProgress(0);
-
-    animateTo(0.48, FIRST_LEG_MS, token, () => {
-      if (token !== transitionToken.current) return;
-      if (brandbookReady.current) {
-        finishEntry(token);
-      } else {
-        waitingForBrandbook.current = () => finishEntry(token);
-      }
-    });
-  }, [animateTo, applyTransitionProgress, finishEntry, postToBrandbook, setPhase]);
 
   const closeBrandbook = useCallback(() => {
     if (sectionPhaseRef.current !== 'active') return;
 
-    const token = ++transitionToken.current;
     setPhase('leaving');
     postToBrandbook('entry-leaving');
-
-    animateTo(0, RETURN_MS, token, () => {
-      if (token !== transitionToken.current) return;
-      applyTransitionProgress(0);
-      setPhase('house');
-      postToBrandbook('park-at-entry');
-    });
-  }, [animateTo, applyTransitionProgress, postToBrandbook, setPhase]);
+    // Hand the entry channel back to zero; the scene controller eases both the
+    // camera and the mask out of it on the same curve it eased them in.
+    window.dispatchEvent(
+      new CustomEvent('greencube:section-transition', {
+        detail: {progress: 0, requestAnchor: true},
+      }),
+    );
+  }, [postToBrandbook, setPhase]);
 
   useEffect(() => {
     const onProgress = (event: Event) => {
-      const current = (event as CustomEvent<GreencubeScrollProgress>).detail;
-      progress.current = current;
-      const atScrollEnd =
-        !current.animating && current.target >= 0.999 && current.settled >= 0.985;
+      const detail = (event as CustomEvent<GreencubeScrollProgress>).detail;
+      const entry = clamp(Number(detail.entry) || 0);
+      const entryTarget = clamp(Number(detail.entryTarget) || 0);
+      entryProgress.current = entry;
 
-      if (atScrollEnd && !wasAtScrollEnd.current && sectionPhaseRef.current === 'house') {
-        openBrandbook();
+      const phase = sectionPhaseRef.current;
+
+      if (phase === 'house') {
+        if (entry > ENTRY_EPSILON && brandbookReady.current) {
+          setShowScrollHint(false);
+          setPhase('entering');
+          postToBrandbook('activate-entry');
+        }
+      } else if (phase === 'entering') {
+        if (entry >= ENTRY_SETTLED && entryTarget >= 0.999) {
+          setPhase('active');
+          postToBrandbook('entry-active');
+        } else if (entry <= ENTRY_EPSILON && entryTarget <= ENTRY_EPSILON) {
+          setPhase('house');
+          postToBrandbook('park-at-entry');
+        }
+      } else if (phase === 'leaving' && entry <= ENTRY_EPSILON && entryTarget <= ENTRY_EPSILON) {
+        setPhase('house');
+        postToBrandbook('park-at-entry');
       }
-      wasAtScrollEnd.current = atScrollEnd;
+
+      renderPortal();
     };
 
     window.addEventListener('greencube:scroll-progress', onProgress);
     return () => window.removeEventListener('greencube:scroll-progress', onProgress);
-  }, [openBrandbook]);
+  }, [postToBrandbook, renderPortal, setPhase]);
 
   useEffect(() => {
     const onAnchor = (event: Event) => {
@@ -255,7 +208,10 @@ export default function App() {
       portalAnchor.current = {
         x: detail.x,
         y: detail.y,
-        radius: Number.isFinite(detail.radius) && detail.radius > 0 ? detail.radius : portalAnchor.current.radius,
+        radius:
+          Number.isFinite(detail.radius) && detail.radius > 0
+            ? detail.radius
+            : portalAnchor.current.radius,
       };
       renderPortal();
     };
@@ -263,41 +219,6 @@ export default function App() {
     window.addEventListener('greencube:transition-anchor', onAnchor);
     return () => window.removeEventListener('greencube:transition-anchor', onAnchor);
   }, [renderPortal]);
-
-  useEffect(() => {
-    window.addEventListener('greencube:next-section-intent', openBrandbook);
-    return () => window.removeEventListener('greencube:next-section-intent', openBrandbook);
-  }, [openBrandbook]);
-
-  useEffect(() => {
-    const canOpenBrandbook = () => {
-      const current = progress.current;
-      return (
-        sectionPhaseRef.current === 'house' &&
-        !current.animating &&
-        current.target >= 0.999 &&
-        current.settled >= 0.985
-      );
-    };
-
-    const onWheel = (event: WheelEvent) => {
-      if (event.deltaY > 8 && canOpenBrandbook()) openBrandbook();
-    };
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (['ArrowDown', 'PageDown', ' ', 'Spacebar'].includes(event.key) && canOpenBrandbook()) {
-        openBrandbook();
-      }
-    };
-
-    window.addEventListener('wheel', onWheel, {passive: true});
-    window.addEventListener('keydown', onKeyDown);
-
-    return () => {
-      window.removeEventListener('wheel', onWheel);
-      window.removeEventListener('keydown', onKeyDown);
-    };
-  }, [openBrandbook]);
 
   useEffect(() => {
     const onMessage = (event: MessageEvent<BrandbookMessage>) => {
@@ -313,8 +234,6 @@ export default function App() {
         if (event.data.ring) childRingAnchor.current = event.data.ring;
         brandbookReady.current = true;
         renderPortal();
-        const continueEntry = waitingForBrandbook.current;
-        if (continueEntry) continueEntry();
       } else if (event.data.type === 'entry-anchor' && event.data.ring) {
         childRingAnchor.current = event.data.ring;
         renderPortal();
@@ -335,8 +254,6 @@ export default function App() {
 
   useEffect(() => {
     return () => {
-      transitionToken.current += 1;
-      window.cancelAnimationFrame(transitionFrame.current ?? 0);
       document.body.classList.remove('brandbook-section-active', 'greentech-section-transitioning');
     };
   }, []);

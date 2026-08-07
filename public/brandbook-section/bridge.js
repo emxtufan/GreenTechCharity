@@ -1,5 +1,7 @@
 (function () {
   const parentWindow = window.parent;
+  // Land straight on the 1/7 frame: road and characters already placed, no
+  // logo intro to sit through.
   const ENTRY_Z = 400;
   const RETURN_TARGET_Z = 430;
   const RETURN_SETTLED_Z = 440;
@@ -46,7 +48,7 @@
     mesh.updateWorldMatrix(true, false);
 
     const center = mesh.localToWorld(new THREE.Vector3(0, 0, 0)).project(camera);
-    const edge = mesh.localToWorld(new THREE.Vector3(122, 0, 0)).project(camera);
+    const edge = mesh.localToWorld(new THREE.Vector3(49.04, 0, 0)).project(camera);
     return {
       x: (center.x + 1) * 0.5,
       y: (1 - center.y) * 0.5,
@@ -68,6 +70,27 @@
     window.requestAnimationFrame(enforceEntryFloor);
   }
 
+  function placeLogoAtEntry(logo) {
+    // enterFrame eases the group toward (-oX, -oY) * (_z / 400); park it on the
+    // value that matches ENTRY_Z so nothing slides on the first frame.
+    const zoom = Math.min(Math.max(ENTRY_Z / 400, 0), 1);
+    logo._group.position.set(-logo._oX * zoom, -logo._oY * zoom, ENTRY_Z);
+  }
+
+  // Pin the logo in its far state so ENTRY_Z lands on the 1/7 composition with
+  // nothing left to play in.
+  function settleLogoAtEntry() {
+    const {stage} = getParts();
+    const logo = stage?._logo;
+    if (!logo) return;
+
+    logo.isNear = true;
+    logo.isNearRoad = true;
+    logo.isNearBtn = false;
+    logo.isInfoNear = false;
+    logo.enterFrame();
+  }
+
   function finalizeEntry() {
     const {runtime, scene, stage} = getParts();
     if (!runtime || !scene || !stage) return;
@@ -79,6 +102,8 @@
     stage.isScrollFix = true;
     stage.isShowFix = true;
     runtime._scroll.setScrollTrg(stage);
+    placeLogoAtEntry(stage._logo);
+    settleLogoAtEntry();
     detailReady = true;
     setPaused(!activeRequested);
     postEntryAnchor('stage0-detail-ready');
@@ -107,13 +132,8 @@
     stage._scrollZ.value = ENTRY_Z;
     stage._z = ENTRY_Z;
 
-    const logo = stage._logo;
-    logo._group.position.set(-logo._oX, -logo._oY, ENTRY_Z);
-    logo.isNear = true;
-    logo.isNearRoad = true;
-    logo.isNearBtn = false;
-    logo.isInfoNear = false;
-    logo.enterFrame();
+    placeLogoAtEntry(stage._logo);
+    settleLogoAtEntry();
 
     window.setTimeout(finalizeEntry, 1250);
   }
