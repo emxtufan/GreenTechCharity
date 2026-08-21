@@ -12,6 +12,8 @@
   let interactionActive = false;
   let detailReady = false;
   let preparing = false;
+  let outroTouchHandled = false;
+  let outroStepLocked = false;
 
   function post(type, payload) {
     if (parentWindow !== window) {
@@ -158,7 +160,83 @@
     return true;
   }
 
+  function getOutro() {
+    return document.getElementById('brandbook-outro');
+  }
+
+  function isOutroActive() {
+    return getOutro()?.classList.contains('is-visible') ?? false;
+  }
+
+  // This is intentionally a separate scroll lane. The 3D journey must never
+  // restart at the house after its final cover; upcoming editorial sections
+  // simply opt in with data-outro-section and are traversed in either direction.
+  function moveOutro(direction) {
+    const outro = getOutro();
+    if (!outro) return false;
+
+    const sections = Array.from(outro.querySelectorAll('[data-outro-section]'));
+    const oldIndex = Number(outro.dataset.outroIndex || 0);
+    const nextIndex = Math.max(0, Math.min(sections.length - 1, oldIndex + direction));
+    if (nextIndex === oldIndex) return false;
+
+    outro.dataset.outroIndex = String(nextIndex);
+    sections.forEach(function (section, index) {
+      const active = index === nextIndex;
+      section.classList.toggle('is-active', active);
+      section.setAttribute('aria-hidden', String(!active));
+    });
+    window.dispatchEvent(new CustomEvent('brandbook-outro-change', {
+      detail: {index: nextIndex, direction},
+    }));
+    return true;
+  }
+
+  // At the first footer panel, a backward gesture slides it away and restores
+  // the already formed 7/7 globe. Nothing is restarted and nothing reaches
+  // the house scene.
+  function returnToFinalStage() {
+    const outro = getOutro();
+    const runtime = window._glMain;
+    const stage = runtime?._world?._stage6;
+    if (!outro) return false;
+
+    outro.classList.remove('is-visible');
+    outro.setAttribute('aria-hidden', 'true');
+
+    if (!runtime || !stage) return true;
+
+    // Keep every visual object exactly as it is. Only reconnect the existing
+    // final scroll controller so a later backward gesture can reach step 7/7.
+    stage._fin._fixScroll = 0;
+    stage._fin.isFix = 2;
+    runtime.removeEnterFrame(stage._fin);
+    runtime.addEnterFrame(stage._fin, 'fixFrame');
+    runtime._scroll.setScrollTrg(stage._fin);
+    return true;
+  }
+
+  function consumeOutroScroll(event, direction) {
+    if (!isOutroActive()) return false;
+    event?.preventDefault();
+    event?.stopImmediatePropagation();
+
+    if (!outroStepLocked) {
+      outroStepLocked = true;
+      if (direction < 0) {
+        if (!moveOutro(direction)) returnToFinalStage();
+      } else {
+        moveOutro(direction);
+      }
+      window.setTimeout(function () {
+        outroStepLocked = false;
+      }, 280);
+    }
+    return true;
+  }
+
   document.addEventListener('wheel', function (event) {
+    if (Math.abs(event.deltaY) > 2 && consumeOutroScroll(event, event.deltaY > 0 ? 1 : -1)) return;
     if (event.deltaY < -2) requestReturn(event);
   }, {capture: true, passive: false});
 
@@ -168,20 +246,31 @@
     touchStartX = touch.clientX;
     touchStartY = touch.clientY;
     touchExitSent = false;
+    outroTouchHandled = false;
   }, {capture: true, passive: true});
 
   document.addEventListener('touchmove', function (event) {
     const touch = event.touches[0];
-    if (!touch || touchExitSent) return;
+    if (!touch || touchExitSent || outroTouchHandled) return;
 
     const dx = touch.clientX - touchStartX;
     const dy = touch.clientY - touchStartY;
+    if (Math.abs(dy) > 26 && Math.abs(dy) > Math.abs(dx) * 1.12 && consumeOutroScroll(event, dy < 0 ? 1 : -1)) {
+      outroTouchHandled = true;
+      return;
+    }
     if (dy > 26 && Math.abs(dy) > Math.abs(dx) * 1.12 && requestReturn(event)) {
       touchExitSent = true;
     }
   }, {capture: true, passive: false});
 
   document.addEventListener('keydown', function (event) {
+    if (event.key === 'ArrowDown' || event.key === 'PageDown' || event.key === ' ' || event.key === 'Spacebar') {
+      if (consumeOutroScroll(event, 1)) return;
+    }
+    if (event.key === 'ArrowUp' || event.key === 'PageUp') {
+      if (consumeOutroScroll(event, -1)) return;
+    }
     if (event.key === 'ArrowUp' || event.key === 'PageUp') requestReturn(event);
   }, {capture: true});
 

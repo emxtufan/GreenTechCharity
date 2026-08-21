@@ -88,9 +88,44 @@ body,
   background-color: var(--brandbook-cream);
 }
 
-.gl-loading,
-.gl-white {
+.gl-loading {
   display: none !important;
+}
+
+/* The original stage toggles this inline during its final cover transition. */
+.gl-white {
+  display: none;
+}
+
+/* Empty white canvas reserved for the sections that follow the journey. */
+.brandbook-outro {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: #fff;
+  transform: translate3d(0, 100%, 0);
+  visibility: hidden;
+  pointer-events: none;
+  will-change: transform;
+  transition: transform 0.45s cubic-bezier(.22, .61, .36, 1), visibility 0s linear 0.45s;
+}
+
+.brandbook-outro.is-visible {
+  visibility: visible;
+  pointer-events: auto;
+  transform: translate3d(0, 0, 0);
+  transition: transform 0.45s cubic-bezier(.22, .61, .36, 1);
+}
+
+.brandbook-outro__section {
+  position: absolute;
+  inset: 0;
+  display: none;
+  background: #fff;
+}
+
+.brandbook-outro__section.is-active {
+  display: block;
 }
 
 body {
@@ -131,6 +166,7 @@ body {
 .gl-scroll-btn {
   color: var(--brandbook-cream-light);
   background-color: var(--brandbook-forest);
+  display: none !important;
 }
 
 .gl-scroll-btnCircle {
@@ -484,34 +520,35 @@ body {
   color: #4b9657;
 }
 
-.bb-step1 .bb-step1__scroll-down {
+.brandbook-scroll-down {
   position: absolute;
   left: 50%;
-  bottom: clamp(52px, 7vh, 108px);
+  bottom: clamp(34px, 5vh, 78px);
+  z-index: 6;
   display: grid;
   place-items: center;
-  transform: translateX(-1%);
+  transform: translateX(-50%);
   pointer-events: none;
 }
 
-.bb-step1 .bb-step1__scroll-down span {
+.brandbook-scroll-down span {
   display: block;
   width: 18px;
   height: 18px;
   margin: -9px;
   border-right: 1px solid currentColor;
   border-bottom: 1px solid currentColor;
-  color: var(--step1-green);
+  color: var(--brandbook-forest);
   opacity: 0;
   transform: rotate(45deg);
   animation: bb-step1-scroll-down 2s infinite;
 }
 
-.bb-step1 .bb-step1__scroll-down span:nth-child(2) {
+.brandbook-scroll-down span:nth-child(2) {
   animation-delay: -.2s;
 }
 
-.bb-step1 .bb-step1__scroll-down span:nth-child(3) {
+.brandbook-scroll-down span:nth-child(3) {
   animation-delay: -.4s;
 }
 
@@ -1494,10 +1531,1403 @@ body {
   transform: rotate(-45deg);
 }
 
+/* Stage 7 / 7: the building chapter. The animated production scene remains
+   untouched behind this responsive version of the step7 editorial layout. */
+.bb-step7 {
+  --step7-ink: #075131;
+  --step7-blue: #1456c4;
+  --step7-paper: rgb(229 229 229 / 82%);
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 9vh auto auto auto minmax(0, 1fr);
+  justify-items: center;
+  align-content: start;
+  row-gap: clamp(10px, 1.7vh, 26px);
+  width: 100%;
+  height: 100%;
+  padding: 0 !important;
+  color: var(--step7-ink);
+  text-align: center;
+  filter: none !important;
+  text-shadow: none !important;
+  transform: none !important;
+}
+
+.bb-step7 .bb-step7__title {
+  position: relative;
+  grid-row: 2;
+  top: auto;
+  left: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: min(72vw, 1180px);
+  height: auto;
+  margin: 0;
+  transform: none;
+}
+
+.bb-step7__ornament {
+  display: grid;
+  grid-template-columns: minmax(48px, 1fr) clamp(54px, 3.8vw, 76px) minmax(48px, 1fr);
+  align-items: center;
+  gap: clamp(16px, 1.7vw, 34px);
+  width: min(42vw, 720px);
+  margin-bottom: clamp(17px, 1.9vh, 34px);
+  color: var(--step7-blue);
+}
+
+.bb-step7__ornament i {
+  height: 2px;
+  background: currentColor;
+}
+
+.bb-step7__ornament svg {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.4;
+}
+
+.bb-step7 .brandbook-title-word {
+  display: block;
+  width: 100%;
+  height: auto;
+  font-family: var(--brandbook-display);
+  font-size: clamp(82px, min(10.4vw, 15.6vh), 204px);
+  font-weight: 400;
+  line-height: .72;
+  letter-spacing: .012em;
+  white-space: nowrap;
+}
+
+.bb-step7 .bb-step7__script {
+  position: relative;
+  grid-row: 3;
+  top: auto;
+  left: auto;
+  width: 94%;
+  margin: 0;
+  color: var(--step7-ink);
+  font-family: ReferenceScript, cursive;
+  font-size: clamp(40px, min(4.6vw, 7.3vh), 89px);
+  font-weight: 400;
+  line-height: .8;
+  letter-spacing: 0;
+  transform: none;
+  white-space: nowrap;
+}
+
+.bb-step7__script span {
+  color: var(--step7-blue);
+}
+
+.bb-step7__script i {
+  display: block;
+  width: clamp(180px, 18.5vw, 350px);
+  height: 3px;
+  margin: clamp(14px, 1.6vh, 26px) clamp(16px, 2vw, 38px) 0 auto;
+  background: var(--step7-blue);
+  border-radius: 50%;
+  transform: rotate(-2deg);
+}
+
+.bb-step7 .bb-step7__points {
+  display: grid;
+  grid-row: 4;
+  gap: clamp(11px, 1.35vh, 22px);
+  width: min(62vw, 940px);
+  margin: clamp(6px, 1vh, 16px) 0 0;
+  padding: 0;
+  color: var(--step7-ink);
+  font-family: ReferenceSans, var(--brandbook-text);
+  font-size: inherit;
+  line-height: 1;
+  letter-spacing: 0;
+  opacity: 1;
+  transform: none;
+}
+
+.bb-step7__point {
+  display: grid;
+  grid-template-columns: clamp(58px, 5.2vw, 94px) minmax(0, 1fr);
+  gap: clamp(14px, 1.45vw, 28px);
+  align-items: center;
+}
+
+.bb-step7__icon {
+  display: grid;
+  place-items: center;
+  width: clamp(58px, 5.2vw, 94px);
+  height: clamp(58px, 5.2vw, 94px);
+  border-radius: 50%;
+  background: var(--step7-paper);
+}
+
+.bb-step7__icon svg {
+  width: 58%;
+  height: 58%;
+  overflow: visible;
+  fill: none;
+  stroke: var(--step7-blue);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.15;
+}
+
+.bb-step7__point-copy {
+  position: relative;
+  display: block;
+  min-height: clamp(58px, 5.2vw, 94px);
+  padding: .35em 0 .62em;
+  color: var(--step7-ink);
+  font-family: ReferenceSans, var(--brandbook-text);
+  font-size: clamp(16px, min(1.5vw, 2.42vh), 28px);
+  font-weight: 400;
+  line-height: 1.38;
+  text-align: left;
+}
+
+.bb-step7__point-copy::after {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  background: var(--step7-blue);
+  content: '';
+  opacity: .85;
+}
+
+.bb-step7__point-copy strong {
+  font-weight: 700;
+}
+
+/* Stage 8 / 8: the transition after building. Its city-and-path illustration
+   stays in the existing scene while this responsive layer supplies step8 copy. */
+.bb-step8 {
+  --step8-ink: #075131;
+  --step8-orange: #ee5d0a;
+  --step8-paper: rgba(255, 251, 239, .83);
+  position: absolute;
+  inset: 0;
+  bottom: auto;
+  left: auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 8vh auto auto minmax(0, 1fr) auto 7vh;
+  align-content: start;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  color: var(--step8-ink);
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0;
+  text-align: left;
+  text-indent: 0;
+  white-space: normal;
+  filter: none !important;
+  text-shadow: none !important;
+}
+
+.bb-step8__headline {
+  display: flex;
+  grid-row: 2;
+  justify-self: start;
+  flex-direction: column;
+  align-items: flex-start;
+  width: min(46vw, 820px);
+  margin-left: clamp(38px, 7.2vw, 140px);
+}
+
+.bb-step8__eyebrow {
+  display: flex;
+  align-items: center;
+  gap: clamp(10px, 1vw, 18px);
+  color: var(--step8-orange);
+  font-family: ReferenceSans, var(--brandbook-text);
+  font-size: clamp(16px, min(1.65vw, 2.65vh), 30px);
+  font-weight: 700;
+  letter-spacing: .13em;
+}
+
+.bb-step8__eyebrow i {
+  width: 2px;
+  height: clamp(30px, 3.4vw, 64px);
+  background: currentColor;
+}
+
+.bb-step8__eyebrow svg {
+  width: clamp(32px, 3vw, 56px);
+  height: auto;
+  overflow: visible;
+  fill: #7ab62b;
+  stroke: #7ab62b;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.bb-step8__word {
+  display: block;
+  margin-top: clamp(18px, 2vh, 36px);
+  color: var(--step8-ink);
+  font-family: var(--brandbook-display);
+  font-size: clamp(82px, min(9.7vw, 14.9vh), 190px);
+  font-weight: 400;
+  line-height: .7;
+  letter-spacing: .01em;
+  white-space: nowrap;
+}
+
+.bb-step8__script {
+  display: block;
+  margin-top: clamp(10px, 1.65vh, 28px);
+  color: var(--step8-orange);
+  font-family: ReferenceScript, cursive;
+  font-size: clamp(48px, min(5.25vw, 8.1vh), 102px);
+  font-weight: 400;
+  line-height: .75;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.bb-step8__script i {
+  display: block;
+  width: clamp(160px, 17vw, 320px);
+  height: 3px;
+  margin: clamp(15px, 1.8vh, 30px) 0 0;
+  background: currentColor;
+  border-radius: 50%;
+  transform: rotate(-2deg);
+}
+
+.bb-step8__intro {
+  grid-row: 3;
+  justify-self: start;
+  width: min(36vw, 660px);
+  margin: clamp(14px, 1.8vh, 30px) 0 0 clamp(38px, 7.2vw, 140px);
+  color: var(--step8-ink);
+  font-family: ReferenceSans, var(--brandbook-text);
+  font-size: clamp(16px, min(1.48vw, 2.35vh), 27px);
+  font-weight: 400;
+  line-height: 1.45;
+}
+
+.bb-step8__intro strong {
+  font-weight: 700;
+}
+
+.bb-step8__bottom {
+  display: grid;
+  grid-row: 5;
+  grid-template-columns: minmax(280px, 1fr) minmax(180px, .65fr);
+  column-gap: clamp(30px, 5vw, 94px);
+  align-items: end;
+  justify-self: center;
+  width: min(76vw, 1260px);
+}
+
+.bb-step8__points {
+  display: grid;
+  gap: clamp(14px, 1.8vh, 28px);
+}
+
+.bb-step8__point {
+  display: grid;
+  grid-template-columns: clamp(60px, 5.2vw, 94px) minmax(0, 1fr);
+  gap: clamp(13px, 1.35vw, 26px);
+  align-items: center;
+}
+
+.bb-step8__icon {
+  display: grid;
+  place-items: center;
+  width: clamp(60px, 5.2vw, 94px);
+  height: clamp(60px, 5.2vw, 94px);
+  border-radius: 50%;
+  background: var(--step8-paper);
+}
+
+.bb-step8__icon svg {
+  width: 58%;
+  height: 58%;
+  overflow: visible;
+  fill: none;
+  stroke: var(--step8-orange);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.2;
+}
+
+.bb-step8__point-copy {
+  position: relative;
+  display: flex;
+  min-height: clamp(60px, 5.2vw, 94px);
+  flex-direction: column;
+  justify-content: center;
+  gap: .32em;
+  padding: .16em 0 .25em clamp(12px, 1vw, 20px);
+  border-left: 2px solid var(--step8-orange);
+  color: var(--step8-ink);
+  font-family: ReferenceSans, var(--brandbook-text);
+  font-weight: 400;
+  line-height: 1.2;
+}
+
+.bb-step8__point-copy strong {
+  font-size: clamp(16px, min(1.45vw, 2.34vh), 27px);
+  font-weight: 700;
+}
+
+.bb-step8__point-copy span {
+  font-size: clamp(14px, min(1.2vw, 1.96vh), 22px);
+}
+
+.bb-step8__next {
+  position: relative;
+  align-self: end;
+  margin: 0;
+  color: var(--step8-ink);
+  font-family: ReferenceSans, var(--brandbook-text);
+  font-size: clamp(20px, min(1.95vw, 3.1vh), 36px);
+  font-weight: 400;
+  line-height: 1.28;
+}
+
+.bb-step8__next i {
+  display: block;
+  width: clamp(20px, 1.8vw, 34px);
+  height: clamp(20px, 1.8vw, 34px);
+  margin-bottom: clamp(10px, 1vh, 18px);
+  background: var(--step8-orange);
+  border-radius: 6px;
+  transform: rotate(45deg);
+}
+
+.bb-step8__next strong {
+  font-weight: 700;
+}
+
+.bb-step8__next span {
+  color: var(--step8-orange);
+  font-family: ReferenceScript, cursive;
+  font-size: 1.18em;
+}
+
+.bb-step8__next b {
+  display: block;
+  width: clamp(120px, 12.5vw, 230px);
+  height: 2px;
+  margin: .25em 0 0;
+  background: var(--step8-orange);
+  transform: rotate(-2deg);
+}
+
+/* Stage 9: the fixed UNIM screen. The existing animated illustration stays
+   underneath; this layer mirrors the poster hierarchy of the reference. */
+.bb-step9 {
+  --step9-ink: #075131;
+  --step9-olive: #8caf74;
+  --step9-paper: rgba(250, 246, 224, .78);
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 6vh auto auto auto minmax(0, 1fr) auto 5vh;
+  justify-items: center;
+  align-content: start;
+  row-gap: clamp(9px, 1.35vh, 24px);
+  width: 100%;
+  height: 100%;
+  padding: 0 !important;
+  color: var(--step9-ink);
+  text-align: center;
+  text-indent: 0;
+  white-space: normal;
+  filter: none !important;
+  text-shadow: none !important;
+  transform: none !important;
+}
+
+.bb-step9 .bb-step9__title {
+  position: relative;
+  grid-row: 2;
+  top: auto;
+  left: auto;
+  display: grid;
+  justify-items: center;
+  width: min(67vw, 1090px);
+  height: auto;
+  margin: 0;
+  color: var(--step9-ink);
+  transform: none;
+}
+
+.bb-step9__ornament {
+  display: grid;
+  grid-template-columns: minmax(76px, 1fr) clamp(54px, 4vw, 82px) minmax(76px, 1fr);
+  align-items: center;
+  gap: clamp(18px, 2vw, 38px);
+  width: min(42vw, 700px);
+  margin-bottom: clamp(12px, 1.5vh, 24px);
+  color: var(--step9-ink);
+}
+
+.bb-step9__ornament i {
+  height: 2px;
+  background: currentColor;
+}
+
+.bb-step9__ornament svg {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.05;
+}
+
+.bb-step9 .brandbook-title-word {
+  display: block;
+  width: 100%;
+  height: auto;
+  font-family: var(--brandbook-display);
+  font-size: clamp(78px, min(10vw, 15.1vh), 196px);
+  font-weight: 400;
+  line-height: .71;
+  letter-spacing: .016em;
+  white-space: nowrap;
+}
+
+.bb-step9__divider {
+  display: grid;
+  grid-template-columns: minmax(74px, 1fr) repeat(3, clamp(5px, .42vw, 8px)) minmax(74px, 1fr);
+  align-items: center;
+  gap: clamp(6px, .65vw, 12px);
+  width: min(37vw, 610px);
+  margin-top: clamp(20px, 2.3vh, 38px);
+}
+
+.bb-step9__divider i {
+  height: 2px;
+  background: var(--step9-ink);
+}
+
+.bb-step9__divider b {
+  width: clamp(5px, .42vw, 8px);
+  height: clamp(5px, .42vw, 8px);
+  border-radius: 50%;
+  background: var(--step9-ink);
+}
+
+.bb-step9 .bb-step9__script {
+  position: relative;
+  grid-row: 3;
+  top: auto;
+  left: auto;
+  width: min(80vw, 1250px);
+  margin: 0;
+  color: var(--step9-ink);
+  font-family: var(--brandbook-display);
+  font-size: clamp(32px, min(3.45vw, 5.2vh), 66px);
+  font-weight: 400;
+  line-height: 1.03;
+  letter-spacing: .003em;
+  transform: none;
+}
+
+.bb-step9__script strong {
+  font-weight: 700;
+}
+
+.bb-step9 .bb-step9__points {
+  display: grid;
+  grid-row: 4;
+  gap: clamp(10px, 1.25vh, 20px);
+  width: min(49vw, 810px);
+  margin: clamp(8px, 1vh, 18px) 0 0;
+  padding: 0;
+  color: var(--step9-ink);
+  font-family: ReferenceSans, var(--brandbook-text);
+  font-size: inherit;
+  line-height: 1;
+  letter-spacing: 0;
+  opacity: 1;
+  transform: none;
+}
+
+.bb-step9__point {
+  display: grid;
+  grid-template-columns: clamp(52px, 4.45vw, 80px) minmax(0, 1fr);
+  gap: clamp(12px, 1.2vw, 23px);
+  align-items: center;
+}
+
+.bb-step9__icon {
+  display: grid;
+  place-items: center;
+  width: clamp(52px, 4.45vw, 80px);
+  height: clamp(52px, 4.45vw, 80px);
+  border-radius: 50%;
+  background: var(--step9-paper);
+}
+
+.bb-step9__icon svg,
+.bb-step9__closing-icon svg {
+  width: 58%;
+  height: 58%;
+  overflow: visible;
+  fill: none;
+  stroke: var(--step9-ink);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.15;
+}
+
+.bb-step9__point-copy {
+  position: relative;
+  display: block;
+  min-height: clamp(52px, 4.45vw, 80px);
+  padding: .34em 0 .62em clamp(12px, 1vw, 20px);
+  border-left: 2px solid var(--step9-olive);
+  color: var(--step9-ink);
+  font-family: ReferenceSans, var(--brandbook-text);
+  font-size: clamp(15px, min(1.33vw, 2.12vh), 25px);
+  font-weight: 400;
+  line-height: 1.32;
+  text-align: left;
+}
+
+.bb-step9__point-copy::after {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 1px;
+  border-bottom: 2px dashed var(--step9-olive);
+  content: '';
+}
+
+.bb-step9__point-copy strong {
+  font-weight: 700;
+}
+
+.bb-step9__closing {
+  display: grid;
+  grid-row: 6;
+  grid-template-columns: clamp(44px, 3.8vw, 70px) minmax(0, 1fr) clamp(24px, 2vw, 38px);
+  column-gap: clamp(12px, 1.25vw, 24px);
+  align-items: center;
+  width: min(53vw, 875px);
+  margin: 0;
+  padding: clamp(12px, 1.3vw, 24px) clamp(16px, 1.6vw, 30px);
+  border-radius: clamp(20px, 2vw, 38px);
+  background: var(--step9-paper);
+  color: var(--step9-ink);
+  font-family: ReferenceSans, var(--brandbook-text);
+  font-size: clamp(15px, min(1.28vw, 2.04vh), 24px);
+  font-weight: 400;
+  line-height: 1.3;
+  text-align: left;
+}
+
+.bb-step9__closing-icon {
+  display: grid;
+  place-items: center;
+  width: clamp(44px, 3.8vw, 70px);
+  height: clamp(44px, 3.8vw, 70px);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .3);
+}
+
+.bb-step9__closing strong {
+  font-weight: 700;
+}
+
+.bb-step9__closing i {
+  width: 2px;
+  height: clamp(36px, 3.4vw, 64px);
+  margin-inline: auto;
+  background: var(--step9-olive);
+}
+
+/* Stage 10: a short editorial bridge between UNIM and REINNOIM. It keeps the
+   existing stage-five movement visible while giving the question its own beat. */
+.bb-step10 {
+  --step10-ink: #075131;
+  --step10-blue: #1765cf;
+  --step10-leaf: #67a93d;
+  position: absolute !important;
+  inset: 0 !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr);
+  grid-template-rows: 10vh auto auto minmax(0, 1fr) auto 9vh;
+  justify-items: start;
+  align-content: start;
+  row-gap: clamp(13px, 1.8vh, 30px);
+  width: 100% !important;
+  height: 100% !important;
+  padding: 0 !important;
+  color: var(--step10-ink) !important;
+  font-family: ReferenceSans, var(--brandbook-text);
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0;
+  text-align: left !important;
+  text-indent: 0 !important;
+  white-space: normal !important;
+  filter: none !important;
+  text-shadow: none !important;
+  transform: none !important;
+}
+
+.bb-step10__label {
+  display: flex;
+  grid-row: 2;
+  grid-column: 1 / -1;
+  align-items: center;
+  gap: clamp(11px, 1.05vw, 20px);
+  width: min(52vw, 910px);
+  margin-left: clamp(38px, 9.6vw, 184px);
+  color: var(--step10-ink);
+  font-family: ReferenceSans, var(--brandbook-text);
+  font-size: clamp(16px, min(1.6vw, 2.6vh), 30px);
+  font-weight: 400;
+  letter-spacing: .17em;
+}
+
+.bb-step10__label i {
+  width: 2px;
+  height: clamp(30px, 3.3vw, 64px);
+  background: var(--step10-blue);
+}
+
+.bb-step10__label strong {
+  font-weight: 700;
+}
+
+.bb-step10__label svg {
+  width: clamp(30px, 3vw, 55px);
+  height: auto;
+  overflow: visible;
+  fill: var(--step10-leaf);
+  stroke: var(--step10-leaf);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.6;
+}
+
+.bb-step10__headline {
+  display: grid;
+  grid-row: 3;
+  grid-column: 1 / -1;
+  justify-items: start;
+  width: min(62vw, 1090px);
+  margin-left: clamp(38px, 9.6vw, 184px);
+  color: var(--step10-ink);
+}
+
+.bb-step10__headline span,
+.bb-step10__headline strong {
+  display: block;
+  font-family: var(--brandbook-display);
+  font-size: clamp(78px, min(10vw, 15vh), 196px);
+  font-weight: 400;
+  line-height: .69;
+  letter-spacing: .018em;
+  white-space: nowrap;
+}
+
+.bb-step10__headline strong {
+  color: var(--step10-blue);
+}
+
+.bb-step10__headline i {
+  width: clamp(150px, 16.5vw, 310px);
+  height: 3px;
+  margin: clamp(20px, 2.3vh, 38px) 0 0 clamp(7px, .7vw, 14px);
+  background: var(--step10-leaf);
+  border-radius: 99px;
+  transform: rotate(-2deg);
+}
+
+.bb-step10__message {
+  grid-row: 4;
+  grid-column: 1 / -1;
+  align-self: start;
+  width: min(40vw, 680px);
+  margin: clamp(18px, 2.5vh, 42px) 0 0 clamp(38px, 9.6vw, 184px);
+  color: var(--step10-ink);
+  font-family: var(--brandbook-display);
+  font-size: clamp(30px, min(3.05vw, 4.7vh), 58px);
+  font-weight: 400;
+  line-height: 1.02;
+  letter-spacing: .005em;
+}
+
+.bb-step10__path {
+  display: flex;
+  grid-row: 5;
+  grid-column: 1;
+  align-items: center;
+  gap: clamp(10px, 1vw, 20px);
+  width: min(74vw, 1240px);
+  margin: 0 0 0 clamp(38px, 9.6vw, 184px);
+  color: var(--step10-blue);
+  font-family: ReferenceSans, var(--brandbook-text);
+  font-size: clamp(13px, min(1.18vw, 1.9vh), 22px);
+  font-weight: 700;
+  letter-spacing: .12em;
+  white-space: nowrap;
+}
+
+.bb-step10__path i,
+.bb-step10__path b {
+  display: block;
+  flex: 1 1 clamp(36px, 6vw, 118px);
+  min-width: clamp(26px, 3vw, 56px);
+  height: 2px;
+  background: currentColor;
+}
+
+.bb-step10__path i {
+  flex-grow: .4;
+  background: var(--step10-leaf);
+}
+
+.bb-step10__path b {
+  height: 1px;
+  background: var(--step10-ink);
+  opacity: .55;
+}
+
+.bb-step10__closing {
+  display: grid;
+  grid-row: 5;
+  grid-column: 2;
+  grid-template-columns: clamp(25px, 2.3vw, 42px) minmax(0, 1fr);
+  column-gap: clamp(12px, 1.1vw, 20px);
+  align-items: center;
+  justify-self: end;
+  width: min(33vw, 550px);
+  margin: clamp(62px, 7vh, 116px) clamp(38px, 7vw, 135px) 0 0;
+  color: var(--step10-ink);
+  font-family: ReferenceSans, var(--brandbook-text);
+  font-size: clamp(15px, min(1.38vw, 2.2vh), 26px);
+  font-weight: 400;
+  line-height: 1.3;
+  text-align: left;
+}
+
+.bb-step10__closing i {
+  width: clamp(24px, 2.25vw, 42px);
+  height: clamp(24px, 2.25vw, 42px);
+  border: 2px solid var(--step10-leaf);
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 clamp(5px, .45vw, 9px) rgba(255, 255, 255, .45);
+}
+
+.bb-step10__closing strong {
+  color: var(--step10-blue);
+  font-weight: 700;
+}
+
+/* Stage 11: the REINNOIM chapter. The original moving stage remains visible;
+   this responsive paper layer gives its circular-economy message a clear form. */
+.bb-step11 {
+  --step11-ink: #075131;
+  --step11-blue: #1765cf;
+  --step11-lime: #71b747;
+  --step11-paper: rgba(252, 248, 229, .82);
+  position: absolute !important;
+  inset: 0 !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 6vh auto auto auto minmax(0, 1fr) auto 5vh;
+  justify-items: center;
+  align-content: start;
+  row-gap: clamp(9px, 1.25vh, 22px);
+  width: 100% !important;
+  height: 100% !important;
+  padding: 0 !important;
+  color: var(--step11-ink) !important;
+  text-align: center !important;
+  text-indent: 0 !important;
+  white-space: normal !important;
+  filter: none !important;
+  text-shadow: none !important;
+  transform: none !important;
+}
+
+.bb-step11 .bb-step11__title {
+  position: relative;
+  grid-row: 2;
+  top: auto;
+  left: auto;
+  display: grid;
+  justify-items: center;
+  width: min(75vw, 1240px);
+  height: auto;
+  margin: 0;
+  color: var(--step11-ink);
+  transform: none;
+}
+
+.bb-step11__ornament {
+  display: grid;
+  grid-template-columns: minmax(68px, 1fr) clamp(48px, 3.6vw, 70px) minmax(68px, 1fr);
+  align-items: center;
+  gap: clamp(17px, 1.8vw, 34px);
+  width: min(38vw, 630px);
+  margin-bottom: clamp(14px, 1.65vh, 27px);
+  color: var(--step11-lime);
+}
+
+.bb-step11__ornament i {
+  height: 2px;
+  background: var(--step11-ink);
+}
+
+.bb-step11__ornament svg {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.1;
+}
+
+.bb-step11 .brandbook-title-word {
+  display: block;
+  width: 100%;
+  height: auto;
+  font-family: var(--brandbook-display);
+  font-size: clamp(76px, min(9.3vw, 14.2vh), 180px);
+  font-weight: 400;
+  line-height: .7;
+  letter-spacing: .014em;
+  white-space: nowrap;
+}
+
+.bb-step11 .bb-step11__script {
+  position: relative;
+  grid-row: 3;
+  top: auto;
+  left: auto;
+  width: min(82vw, 1250px);
+  margin: 0;
+  color: var(--step11-ink);
+  font-family: ReferenceScript, cursive;
+  font-size: clamp(39px, min(4.15vw, 6.45vh), 80px);
+  font-weight: 400;
+  line-height: .82;
+  letter-spacing: 0;
+  transform: none;
+  white-space: nowrap;
+}
+
+.bb-step11__script strong {
+  color: var(--step11-blue);
+  font-weight: 400;
+}
+
+.bb-step11__script i {
+  display: block;
+  width: clamp(160px, 16.5vw, 310px);
+  height: 3px;
+  margin: clamp(14px, 1.6vh, 27px) auto 0;
+  background: var(--step11-blue);
+  border-radius: 99px;
+  transform: rotate(-2deg);
+}
+
+.bb-step11 .bb-step11__intro {
+  grid-row: 4;
+  width: min(60vw, 980px);
+  margin: clamp(6px, .7vh, 12px) 0 0;
+  color: var(--step11-ink);
+  font-family: ReferenceSans, var(--brandbook-text);
+  font-size: clamp(16px, min(1.45vw, 2.3vh), 27px);
+  font-weight: 400;
+  line-height: 1.35;
+}
+
+.bb-step11__points {
+  display: grid;
+  grid-row: 5;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(10px, 1.15vw, 22px);
+  align-self: end;
+  width: min(66vw, 1090px);
+  margin: 0;
+}
+
+.bb-step11__point {
+  display: grid;
+  grid-template-columns: clamp(58px, 4.65vw, 86px) minmax(0, 1fr);
+  column-gap: clamp(12px, 1vw, 20px);
+  align-items: center;
+  min-height: clamp(72px, 6vw, 108px);
+  padding: clamp(8px, .8vw, 15px);
+  border: 1px solid rgba(7, 81, 49, .23);
+  border-radius: clamp(18px, 1.6vw, 30px);
+  background: var(--step11-paper);
+  text-align: left;
+}
+
+.bb-step11__icon {
+  display: grid;
+  place-items: center;
+  width: clamp(58px, 4.65vw, 86px);
+  height: clamp(58px, 4.65vw, 86px);
+  border-radius: 50%;
+  background: rgba(115, 183, 71, .18);
+}
+
+.bb-step11__icon svg {
+  width: 56%;
+  height: 56%;
+  overflow: visible;
+  fill: none;
+  stroke: var(--step11-blue);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.2;
+}
+
+.bb-step11__point-copy {
+  display: flex;
+  flex-direction: column;
+  gap: .23em;
+  color: var(--step11-ink);
+  font-family: ReferenceSans, var(--brandbook-text);
+  font-size: clamp(14px, min(1.15vw, 1.84vh), 22px);
+  font-weight: 400;
+  line-height: 1.2;
+}
+
+.bb-step11__point-copy strong {
+  color: var(--step11-blue);
+  font-size: 1.08em;
+  font-weight: 700;
+  letter-spacing: .08em;
+}
+
+.bb-step11__closing {
+  display: grid;
+  grid-row: 6;
+  grid-template-columns: clamp(28px, 2.45vw, 46px) minmax(0, 1fr);
+  column-gap: clamp(12px, 1.15vw, 22px);
+  align-items: center;
+  width: min(47vw, 770px);
+  margin: 0;
+  color: var(--step11-ink);
+  font-family: ReferenceSans, var(--brandbook-text);
+  font-size: clamp(15px, min(1.3vw, 2.06vh), 24px);
+  font-weight: 400;
+  line-height: 1.3;
+  text-align: left;
+}
+
+.bb-step11__closing i {
+  width: clamp(26px, 2.35vw, 44px);
+  height: clamp(26px, 2.35vw, 44px);
+  border: 2px solid var(--step11-lime);
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 clamp(5px, .45vw, 9px) rgba(23, 101, 207, .14);
+}
+
+.bb-step11__closing strong {
+  color: var(--step11-blue);
+  font-weight: 700;
+}
+
+/* Reference composition for REINNOIM (step10): a calm cream poster with the
+   practical actions set in one horizontal rhythm above the existing 3D scene. */
+.bb-step11 {
+  --step11-ink: #075131;
+  --step11-lime: #9bc600;
+  --step11-leaf: #008253;
+  --step11-paper: rgba(251, 247, 228, .92);
+  grid-template-rows: 4vh auto auto auto auto auto minmax(0, 1fr) 4vh;
+  row-gap: clamp(8px, 1.05vh, 19px);
+  background: transparent;
+}
+
+.bb-step11__top {
+  display: grid;
+  grid-row: 2;
+  grid-template-columns: minmax(80px, 1fr) clamp(48px, 3.9vw, 76px) minmax(80px, 1fr);
+  align-items: center;
+  width: min(72vw, 1220px);
+  min-height: clamp(56px, 6vh, 105px);
+}
+
+.bb-step11__leaf {
+  width: clamp(88px, 9vw, 170px);
+  height: auto;
+  overflow: visible;
+}
+
+.bb-step11__leaf--left {
+  justify-self: start;
+  transform: rotate(-14deg);
+}
+
+.bb-step11__leaf--right {
+  justify-self: end;
+  transform: rotate(12deg);
+}
+
+.bb-step11__leaf path:last-child {
+  fill: none;
+  stroke: rgba(244, 255, 229, .68);
+  stroke-linecap: round;
+  stroke-width: 1.4;
+}
+
+.bb-step11__home {
+  display: grid;
+  place-items: center;
+  width: clamp(48px, 3.9vw, 76px);
+  height: clamp(48px, 3.9vw, 76px);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .36);
+}
+
+.bb-step11__home svg {
+  width: 64%;
+  height: 64%;
+  overflow: visible;
+  fill: none;
+  stroke: var(--step11-ink);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.15;
+}
+
+.bb-step11 .bb-step11__title {
+  grid-row: 3;
+  width: min(82vw, 1380px);
+}
+
+.bb-step11 .brandbook-title-word {
+  color: var(--step11-ink);
+  font-size: clamp(78px, min(10.5vw, 16.1vh), 210px);
+  line-height: .69;
+  letter-spacing: .02em;
+}
+
+.bb-step11__divider {
+  display: grid;
+  grid-row: 4;
+  grid-template-columns: minmax(80px, 1fr) clamp(7px, .5vw, 10px) minmax(80px, 1fr);
+  align-items: center;
+  gap: clamp(18px, 1.5vw, 30px);
+  width: min(32vw, 520px);
+  color: var(--step11-ink);
+}
+
+.bb-step11__divider i {
+  height: 2px;
+  background: currentColor;
+}
+
+.bb-step11__divider b {
+  width: clamp(7px, .5vw, 10px);
+  height: clamp(7px, .5vw, 10px);
+  border-radius: 50%;
+  background: var(--step11-leaf);
+}
+
+.bb-step11 .bb-step11__script {
+  grid-row: 5;
+  width: min(80vw, 1240px);
+  color: var(--step11-ink);
+  font-family: var(--brandbook-display);
+  font-size: clamp(35px, min(3.7vw, 5.8vh), 71px);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.bb-step11__script strong {
+  color: var(--step11-leaf);
+  font-weight: 700;
+}
+
+.bb-step11__script i {
+  display: none;
+}
+
+.bb-step11 .bb-step11__intro {
+  grid-row: 6;
+  width: min(62vw, 1000px);
+  margin: clamp(8px, .9vh, 15px) 0 0;
+  color: var(--step11-ink);
+  font-family: ReferenceSans, var(--brandbook-text);
+  font-size: clamp(16px, min(1.38vw, 2.2vh), 26px);
+  font-weight: 400;
+  line-height: 1.62;
+}
+
+.bb-step11__intro strong {
+  font-weight: 700;
+}
+
+.bb-step11__points {
+  grid-row: 7;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  align-self: end;
+  width: min(57vw, 960px);
+  margin: 0 0 clamp(21vh, 19vw, 300px);
+}
+
+.bb-step11__point {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  justify-items: center;
+  row-gap: clamp(9px, .85vw, 16px);
+  min-height: 0;
+  padding: 0 clamp(10px, 1.2vw, 24px);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  text-align: center;
+}
+
+.bb-step11__point:not(:first-child)::before {
+  position: absolute;
+  top: 9%;
+  bottom: 7%;
+  left: 0;
+  border-left: 2px dashed rgba(126, 160, 34, .7);
+  content: '';
+}
+
+.bb-step11__icon {
+  width: clamp(58px, 4.8vw, 92px);
+  height: clamp(58px, 4.8vw, 92px);
+  background: rgba(208, 226, 121, .24);
+}
+
+.bb-step11__icon svg {
+  width: 56%;
+  height: 56%;
+  stroke: var(--step11-ink);
+}
+
+.bb-step11__point-copy {
+  align-items: center;
+  gap: .45em;
+  color: var(--step11-ink);
+  font-size: clamp(14px, min(1.08vw, 1.72vh), 20px);
+  line-height: 1.3;
+  text-align: center;
+}
+
+.bb-step11__point-copy strong {
+  color: var(--step11-ink);
+  font-size: clamp(15px, min(1.2vw, 1.9vh), 23px);
+  letter-spacing: .025em;
+}
+
+.bb-step11__closing {
+  display: none;
+}
+
+/* Final synthesis (step11): the stage-six earth and figures remain entirely
+   in Three.js, while this layer follows the quiet editorial composition. */
+.bb-step12 {
+  --step12-ink: #075131;
+  --step12-leaf: #52a935;
+  position: absolute !important;
+  inset: 0 !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 7vh auto auto minmax(0, 1fr) auto auto 6vh;
+  justify-items: center;
+  align-content: start;
+  row-gap: clamp(12px, 1.5vh, 28px);
+  width: 100% !important;
+  height: 100% !important;
+  color: var(--step12-ink) !important;
+  font-family: ReferenceSans, var(--brandbook-text);
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0;
+  text-align: center !important;
+  text-indent: 0 !important;
+  white-space: normal !important;
+  filter: none !important;
+  text-shadow: none !important;
+  transform: none !important;
+}
+
+.bb-step12__sprout {
+  display: grid;
+  grid-row: 2;
+  place-items: center;
+  width: clamp(42px, 3.8vw, 72px);
+  height: clamp(42px, 3.8vw, 72px);
+  margin-bottom: clamp(-7px, -.5vh, -3px);
+  color: var(--step12-leaf);
+}
+
+.bb-step12__sprout svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.2;
+}
+
+.bb-step12 .bb-step12__title {
+  position: static;
+  grid-row: 3;
+  margin: 0;
+  color: var(--step12-ink);
+  font-family: var(--brandbook-display);
+  font-size: clamp(48px, min(4.5vw, 7.15vh), 88px);
+  font-weight: 400;
+  line-height: 1.06;
+  letter-spacing: .006em;
+  transform: none;
+  white-space: nowrap;
+}
+
+.bb-step12__title strong {
+  font-weight: 700;
+}
+
+.bb-step12__divider {
+  display: grid;
+  grid-row: 4;
+  grid-template-columns: minmax(70px, 1fr) clamp(7px, .5vw, 10px) minmax(70px, 1fr);
+  align-self: start;
+  align-items: center;
+  gap: clamp(18px, 1.5vw, 30px);
+  width: min(29vw, 460px);
+  margin-top: clamp(8px, 1.2vh, 22px);
+}
+
+.bb-step12__divider i {
+  height: 2px;
+  background: var(--step12-ink);
+}
+
+.bb-step12__divider b {
+  width: clamp(7px, .5vw, 10px);
+  height: clamp(7px, .5vw, 10px);
+  border-radius: 50%;
+  background: var(--step12-leaf);
+}
+
+.bb-step12 .bb-step12__copy {
+  position: static;
+  grid-row: 5;
+  align-self: end;
+  margin: 0;
+  color: var(--step12-ink);
+  font-family: ReferenceSans, var(--brandbook-text);
+  font-size: clamp(20px, min(2.05vw, 3.25vh), 39px);
+  font-weight: 400;
+  line-height: 1.4;
+  transform: none;
+  white-space: nowrap;
+}
+
+.bb-step12__copy strong {
+  font-weight: 700;
+}
+
+.bb-step12__footer {
+  display: grid;
+  grid-row: 6;
+  grid-template-columns: minmax(44px, 1fr) clamp(38px, 2.9vw, 56px) minmax(44px, 1fr);
+  align-items: center;
+  gap: clamp(14px, 1.25vw, 24px);
+  width: min(21vw, 340px);
+  color: var(--step12-ink);
+}
+
+.bb-step12__footer i {
+  height: 2px;
+  background: currentColor;
+}
+
+.bb-step12__footer svg {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  fill: none;
+  stroke: var(--step12-leaf);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.9;
+}
+
 @media screen and (min-width: 1024px) {
   .bb-step5 {
     transform: scale(.82) !important;
     transform-origin: top center;
+  }
+
+  .bb-step7 {
+    transform: scale(.78) !important;
+    transform-origin: top center;
+  }
+
+  /* Final step: keep the editorial copy clear on landscape displays without
+     competing with the earth illustration below it. */
+  .bb-step12 {
+    grid-template-rows: 8vh auto auto minmax(0, 1fr) auto auto 7vh;
+    row-gap: clamp(10px, 1.1vh, 20px);
+  }
+
+  .bb-step12__sprout {
+    width: clamp(38px, min(2.9vw, 4.4vh), 56px);
+    height: clamp(38px, min(2.9vw, 4.4vh), 56px);
+  }
+
+  .bb-step12 .bb-step12__title {
+    max-width: 72vw;
+    font-size: clamp(42px, min(4vw, 6.15vh), 74px);
+    line-height: 1.04;
+  }
+
+  .bb-step12__divider {
+    width: min(22vw, 360px);
+    margin-top: 0;
+  }
+
+  .bb-step12 .bb-step12__copy {
+    max-width: 58vw;
+    font-size: clamp(18px, min(1.7vw, 2.7vh), 32px);
+    line-height: 1.34;
+  }
+
+  .bb-step12__footer {
+    width: min(16vw, 260px);
   }
 }
 
@@ -1574,11 +3004,11 @@ body {
     line-height: 1.6;
   }
 
-  .bb-step1 .bb-step1__scroll-down {
-    bottom: max(38px, calc(env(safe-area-inset-bottom) + 18px));
+  .brandbook-scroll-down {
+    bottom: max(30px, calc(env(safe-area-inset-bottom) + 14px));
   }
 
-  .bb-step1 .bb-step1__scroll-down span {
+  .brandbook-scroll-down span {
     width: 14px;
     height: 14px;
     margin: -7px;
@@ -1944,6 +3374,555 @@ body {
     width: 26px;
     height: 24px;
     margin-bottom: 8px;
+  }
+
+  .bb-step7 {
+    grid-template-rows: 7vh auto auto auto minmax(0, 1fr);
+    row-gap: 10px;
+  }
+
+  .bb-step7 .bb-step7__title {
+    width: 92vw;
+  }
+
+  .bb-step7__ornament {
+    grid-template-columns: minmax(32px, 1fr) 50px minmax(32px, 1fr);
+    gap: 14px;
+    width: 70vw;
+    margin-bottom: 14px;
+  }
+
+  .bb-step7__ornament i {
+    height: 1px;
+  }
+
+  .bb-step7 .brandbook-title-word {
+    font-size: clamp(62px, 18vw, 86px);
+  }
+
+  .bb-step7 .bb-step7__script {
+    width: 100%;
+    font-size: clamp(34px, 9vw, 43px);
+  }
+
+  .bb-step7__script i {
+    width: 38vw;
+    height: 2px;
+    margin-top: 14px;
+  }
+
+  .bb-step7 .bb-step7__points {
+    gap: 9px;
+    width: 80vw;
+    margin-top: 3px;
+  }
+
+  .bb-step7__point {
+    grid-template-columns: 50px minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .bb-step7__icon {
+    width: 50px;
+    height: 50px;
+  }
+
+  .bb-step7__point-copy {
+    min-height: 50px;
+    font-size: clamp(13px, 3.4vw, 15px);
+    line-height: 1.33;
+  }
+
+  .bb-step7__point-copy::after {
+    height: 1px;
+  }
+
+  .bb-step8 {
+    grid-template-rows: 6vh auto auto minmax(0, 1fr) auto 5vh;
+  }
+
+  .bb-step8__headline {
+    width: 82vw;
+    margin-left: 10vw;
+  }
+
+  .bb-step8__eyebrow {
+    gap: 9px;
+    font-size: clamp(14px, 4vw, 18px);
+    letter-spacing: .12em;
+  }
+
+  .bb-step8__eyebrow i {
+    width: 1px;
+    height: 28px;
+  }
+
+  .bb-step8__eyebrow svg {
+    width: 34px;
+  }
+
+  .bb-step8__word {
+    margin-top: 14px;
+    font-size: clamp(56px, 17.5vw, 82px);
+  }
+
+  .bb-step8__script {
+    margin-top: 12px;
+    font-size: clamp(36px, 10vw, 48px);
+  }
+
+  .bb-step8__script i {
+    width: 35vw;
+    height: 2px;
+    margin-top: 15px;
+  }
+
+  .bb-step8__intro {
+    width: 78vw;
+    margin: 14px 0 0 10vw;
+    font-size: clamp(14px, 3.5vw, 16px);
+    line-height: 1.43;
+  }
+
+  .bb-step8__bottom {
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, .75fr);
+    column-gap: 14px;
+    width: 84vw;
+  }
+
+  .bb-step8__points {
+    gap: 10px;
+  }
+
+  .bb-step8__point {
+    grid-template-columns: 46px minmax(0, 1fr);
+    gap: 9px;
+  }
+
+  .bb-step8__icon {
+    width: 46px;
+    height: 46px;
+  }
+
+  .bb-step8__point-copy {
+    min-height: 46px;
+    gap: 3px;
+    padding-left: 9px;
+  }
+
+  .bb-step8__point-copy strong {
+    font-size: clamp(12px, 3.3vw, 15px);
+  }
+
+  .bb-step8__point-copy span {
+    font-size: clamp(11px, 3vw, 13px);
+    line-height: 1.2;
+  }
+
+  .bb-step8__next {
+    font-size: clamp(14px, 3.7vw, 17px);
+    line-height: 1.27;
+  }
+
+  .bb-step8__next i {
+    width: 22px;
+    height: 22px;
+    margin-bottom: 9px;
+  }
+
+  .bb-step8__next b {
+    width: 26vw;
+    height: 1px;
+  }
+
+  .bb-step9 {
+    grid-template-rows: 4vh auto auto auto minmax(0, 1fr) auto 3vh;
+    row-gap: 8px;
+  }
+
+  .bb-step9 .bb-step9__title {
+    width: 88vw;
+  }
+
+  .bb-step9__ornament {
+    grid-template-columns: minmax(34px, 1fr) 46px minmax(34px, 1fr);
+    gap: 13px;
+    width: 70vw;
+    margin-bottom: 11px;
+  }
+
+  .bb-step9__ornament i,
+  .bb-step9__divider i {
+    height: 1px;
+  }
+
+  .bb-step9 .brandbook-title-word {
+    font-size: clamp(58px, 17vw, 82px);
+  }
+
+  .bb-step9__divider {
+    width: 54vw;
+    margin-top: 17px;
+  }
+
+  .bb-step9 .bb-step9__script {
+    width: 84vw;
+    font-size: clamp(22px, 6.1vw, 30px);
+    line-height: 1.1;
+  }
+
+  .bb-step9 .bb-step9__points {
+    gap: 8px;
+    width: 83vw;
+    margin-top: 4px;
+  }
+
+  .bb-step9__point {
+    grid-template-columns: 46px minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .bb-step9__icon {
+    width: 46px;
+    height: 46px;
+  }
+
+  .bb-step9__point-copy {
+    min-height: 46px;
+    padding: .32em 0 .55em 10px;
+    border-left-width: 1px;
+    font-size: clamp(12px, 3.3vw, 15px);
+    line-height: 1.27;
+  }
+
+  .bb-step9__point-copy::after {
+    border-bottom-width: 1px;
+  }
+
+  .bb-step9__closing {
+    grid-template-columns: 38px minmax(0, 1fr) 18px;
+    column-gap: 10px;
+    width: 83vw;
+    padding: 10px 14px;
+    border-radius: 20px;
+    font-size: clamp(12px, 3.25vw, 15px);
+    line-height: 1.25;
+  }
+
+  .bb-step9__closing-icon {
+    width: 38px;
+    height: 38px;
+  }
+
+  .bb-step9__closing i {
+    width: 1px;
+    height: 34px;
+  }
+
+  .bb-step10 {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 7vh auto auto minmax(0, 1fr) auto auto 4vh;
+    row-gap: 11px;
+  }
+
+  .bb-step10__label {
+    grid-column: 1;
+    gap: 9px;
+    width: 80vw;
+    margin-left: 10vw;
+    font-size: clamp(13px, 3.7vw, 17px);
+    letter-spacing: .14em;
+  }
+
+  .bb-step10__label i {
+    width: 1px;
+    height: 26px;
+  }
+
+  .bb-step10__label svg {
+    width: 31px;
+  }
+
+  .bb-step10__headline {
+    grid-column: 1;
+    width: 80vw;
+    margin-left: 10vw;
+  }
+
+  .bb-step10__headline span,
+  .bb-step10__headline strong {
+    font-size: clamp(59px, 16.6vw, 82px);
+  }
+
+  .bb-step10__headline i {
+    width: 35vw;
+    height: 2px;
+    margin-top: 17px;
+  }
+
+  .bb-step10__message {
+    grid-column: 1;
+    width: 80vw;
+    margin: 17px 0 0 10vw;
+    font-size: clamp(23px, 6.3vw, 30px);
+    line-height: 1.06;
+  }
+
+  .bb-step10__path {
+    grid-row: 5;
+    grid-column: 1;
+    gap: 6px;
+    width: 80vw;
+    margin-left: 10vw;
+    font-size: clamp(9px, 2.45vw, 12px);
+    letter-spacing: .075em;
+  }
+
+  .bb-step10__path i,
+  .bb-step10__path b {
+    min-width: 14px;
+    height: 1px;
+  }
+
+  .bb-step10__closing {
+    grid-row: 6;
+    grid-column: 1;
+    justify-self: start;
+    width: 80vw;
+    margin: 5px 0 0 10vw;
+    font-size: clamp(13px, 3.4vw, 16px);
+  }
+
+  .bb-step10__closing i {
+    width: 28px;
+    height: 28px;
+    border-width: 1px;
+  }
+
+  .bb-step11 {
+    grid-template-rows: 4vh auto auto auto minmax(0, 1fr) auto 3vh;
+    row-gap: 8px;
+  }
+
+  .bb-step11 .bb-step11__title {
+    width: 92vw;
+  }
+
+  .bb-step11__ornament {
+    grid-template-columns: minmax(34px, 1fr) 44px minmax(34px, 1fr);
+    gap: 13px;
+    width: 68vw;
+    margin-bottom: 11px;
+  }
+
+  .bb-step11__ornament i {
+    height: 1px;
+  }
+
+  .bb-step11 .brandbook-title-word {
+    font-size: clamp(54px, 15.5vw, 76px);
+  }
+
+  .bb-step11 .bb-step11__script {
+    width: 92vw;
+    font-size: clamp(31px, 8.6vw, 42px);
+  }
+
+  .bb-step11__script i {
+    width: 34vw;
+    height: 2px;
+    margin-top: 13px;
+  }
+
+  .bb-step11 .bb-step11__intro {
+    width: 82vw;
+    margin-top: 2px;
+    font-size: clamp(13px, 3.45vw, 16px);
+    line-height: 1.32;
+  }
+
+  .bb-step11__points {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 7px;
+    align-self: end;
+    width: 84vw;
+  }
+
+  .bb-step11__point {
+    grid-template-columns: 46px minmax(0, 1fr);
+    column-gap: 10px;
+    min-height: 56px;
+    padding: 6px 9px;
+    border-radius: 16px;
+  }
+
+  .bb-step11__icon {
+    width: 46px;
+    height: 46px;
+  }
+
+  .bb-step11__point-copy {
+    gap: 2px;
+    font-size: clamp(11px, 2.95vw, 14px);
+    line-height: 1.15;
+  }
+
+  .bb-step11__point-copy strong {
+    font-size: 1.05em;
+  }
+
+  .bb-step11__closing {
+    grid-template-columns: 28px minmax(0, 1fr);
+    column-gap: 10px;
+    width: 82vw;
+    font-size: clamp(12px, 3.2vw, 15px);
+  }
+
+  .bb-step11__closing i {
+    width: 27px;
+    height: 27px;
+    border-width: 1px;
+  }
+
+  .bb-step11 {
+    grid-template-rows: 3vh auto auto auto auto auto minmax(0, 1fr) 3vh;
+    row-gap: 7px;
+  }
+
+  .bb-step11__top {
+    grid-template-columns: minmax(55px, 1fr) 43px minmax(55px, 1fr);
+    width: 84vw;
+    min-height: 49px;
+  }
+
+  .bb-step11__leaf {
+    width: 65px;
+  }
+
+  .bb-step11__home {
+    width: 43px;
+    height: 43px;
+  }
+
+  .bb-step11 .bb-step11__title {
+    width: 95vw;
+  }
+
+  .bb-step11 .brandbook-title-word {
+    font-size: clamp(52px, 14.7vw, 72px);
+  }
+
+  .bb-step11__divider {
+    gap: 14px;
+    width: 48vw;
+  }
+
+  .bb-step11__divider i {
+    height: 1px;
+  }
+
+  .bb-step11__divider b {
+    width: 6px;
+    height: 6px;
+  }
+
+  .bb-step11 .bb-step11__script {
+    width: 94vw;
+    font-size: clamp(25px, 6.7vw, 32px);
+  }
+
+  .bb-step11 .bb-step11__intro {
+    width: 90vw;
+    margin-top: 4px;
+    font-size: clamp(12px, 3.08vw, 14px);
+    line-height: 1.47;
+  }
+
+  .bb-step11__points {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0;
+    align-self: end;
+    width: 88vw;
+    margin: 0 0 40vh;
+  }
+
+  .bb-step11__point {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    row-gap: 6px;
+    min-height: 0;
+    padding: 0 4px;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .bb-step11__point:not(:first-child)::before {
+    top: 7%;
+    bottom: 5%;
+    border-left-width: 1px;
+  }
+
+  .bb-step11__icon {
+    width: 50px;
+    height: 50px;
+  }
+
+  .bb-step11__point-copy {
+    gap: 3px;
+    font-size: clamp(10px, 2.6vw, 12px);
+    line-height: 1.18;
+  }
+
+  .bb-step11__point-copy strong {
+    font-size: clamp(11px, 2.85vw, 13px);
+    letter-spacing: 0;
+  }
+
+  .bb-step12 {
+    grid-template-rows: 6vh auto auto minmax(0, 1fr) auto auto 6vh;
+    row-gap: 10px;
+  }
+
+  .bb-step12__sprout {
+    width: 40px;
+    height: 40px;
+  }
+
+  .bb-step12 .bb-step12__title {
+    font-size: clamp(35px, 9.4vw, 46px);
+    line-height: 1.05;
+  }
+
+  .bb-step12__divider {
+    grid-template-columns: minmax(48px, 1fr) 6px minmax(48px, 1fr);
+    gap: 14px;
+    width: 47vw;
+    margin-top: 4px;
+  }
+
+  .bb-step12__divider i {
+    height: 1px;
+  }
+
+  .bb-step12__divider b {
+    width: 6px;
+    height: 6px;
+  }
+
+  .bb-step12 .bb-step12__copy {
+    width: 86vw;
+    font-size: clamp(15px, 4.2vw, 20px);
+    line-height: 1.38;
+  }
+
+  .bb-step12__footer {
+    grid-template-columns: minmax(36px, 1fr) 35px minmax(36px, 1fr);
+    gap: 12px;
+    width: 43vw;
+  }
+
+  .bb-step12__footer i {
+    height: 1px;
   }
 }
 
