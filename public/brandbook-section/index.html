@@ -327,10 +327,68 @@
     </div>
   </div>
   <div class="gl-white"></div>
-  <section id="brandbook-outro" class="brandbook-outro" aria-hidden="true" data-outro-index="0">
-    <div class="brandbook-outro__section is-active" data-outro-section aria-hidden="false"></div>
-  </section>
+  <footer id="brandbook-outro" class="brandbook-outro" aria-hidden="true" data-outro-index="0">
+    <section class="brandbook-outro__section bb-outro-panel bb-outro-final is-active" data-outro-section aria-hidden="false" aria-labelledby="bb-outro-title-3">
+      <div class="bb-outro-final__accent" aria-hidden="true">
+        <img src="assets/image/ring3.webp" alt="">
+      </div>
+      <div class="bb-outro-shell bb-outro-final__shell">
+        <header class="bb-outro-header">
+          <a class="bb-outro-brand" href="/" target="_top" aria-label="GREENTECH Charity, pagina principala">
+            <span class="bb-outro-brand__mark" aria-hidden="true">
+              <svg viewBox="0 0 42 42"><path d="M21 36C11 30 8 21 10 10c10 3 17 10 17 20M21 36c1-11 6-19 15-24 2 11-3 20-15 24ZM21 36V22"/></svg>
+            </span>
+            <span class="bb-outro-brand__name">GREENTECH</span>
+            <span class="bb-outro-brand__sub">CHARITY</span>
+          </a>
+          <span class="bb-outro-kicker">Implica-te&nbsp;&nbsp;/&nbsp;&nbsp;Urmatorul camin</span>
+        </header>
 
+        <div class="bb-outro-final__content">
+          <div class="bb-outro-final__statement">
+            <p class="bb-outro-eyebrow"><span></span> Viitorul are nevoie de oameni</p>
+            <h2 id="bb-outro-title-3" class="bb-outro-display">Construieste<br><em>alaturi de noi.</em></h2>
+          </div>
+
+          <nav class="bb-outro-contribute" aria-label="Modalitati de implicare">
+            <button type="button" data-bb-modal-open="donation"><span>01</span><strong>Doneaza</strong><small>Transforma o contributie intr-o parte reala dintr-un camin.</small><i aria-hidden="true">&nearr;</i></button>
+            <button type="button" data-bb-modal-open="volunteer"><span>02</span><strong>Devino voluntar</strong><small>Pune experienta si timpul tau in slujba unei familii.</small><i aria-hidden="true">&nearr;</i></button>
+            <button type="button" data-bb-modal-open="partner"><span>03</span><strong>Devino partener</strong><small>Construieste cu noi un model de sprijin care poate dura.</small><i aria-hidden="true">&nearr;</i></button>
+          </nav>
+        </div>
+
+        <div class="bb-outro-footer">
+          <p class="bb-outro-footer__manifest">Locuinte sustenabile.<br><strong>Speranta concreta.</strong></p>
+          <nav class="bb-outro-footer__links" aria-label="Navigare finala">
+            <div><span>Descopera</span><a href="/proiecte/" target="_top">Proiecte</a><a href="/facts-and-figures/" target="_top">Impact</a><a href="/der-greencube/" target="_top">Casa sustenabila</a><a href="/apotheke/" target="_top">Sprijin pentru familii</a></div>
+            <div><span>Organizatie</span><button type="button" data-bb-modal-open="about">Despre noi</button><button type="button" data-bb-modal-open="contact">Contact</button><button type="button" data-bb-modal-open="newsletter">Newsletter</button><button type="button" data-bb-modal-open="social">Social media</button><a href="/impressum/" target="_top">Transparenta</a></div>
+          </nav>
+          <div class="bb-outro-footer__legal"><span>&copy; 2026 GREENTECH CHARITY</span><a href="/impressum/" target="_top">Informatii legale</a></div>
+        </div>
+
+        <div class="bb-outro-wordmark" aria-hidden="true">GREENTECH</div>
+      </div>
+    </section>
+
+    <dialog id="bb-outro-modal" class="bb-modal" aria-labelledby="bb-modal-title" aria-describedby="bb-modal-description">
+      <button class="bb-modal__backdrop" type="button" tabindex="-1" data-bb-modal-close aria-label="Inchide fereastra"></button>
+      <section class="bb-modal__panel">
+        <header class="bb-modal__header">
+          <div>
+            <p class="bb-modal__eyebrow" data-bb-modal-eyebrow>GREENTECH Charity</p>
+            <h2 id="bb-modal-title" data-bb-modal-title>Implica-te</h2>
+          </div>
+          <button class="bb-modal__close" type="button" data-bb-modal-close aria-label="Inchide fereastra" autofocus>
+            <span></span><span></span>
+          </button>
+        </header>
+        <div class="bb-modal__scroll" data-bb-modal-content></div>
+      </section>
+    </dialog>
+  </footer>
+
+  <script src="footer-config.js"></script>
+  <script src="footer-interactions.js"></script>
   <script src="bridge.js"></script>
   <script src="assets/js/glmain.min.js"></script>
 </body>

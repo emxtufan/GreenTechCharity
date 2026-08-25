@@ -11,7 +11,8 @@ function originalPages(): Plugin {
       server.middlewares.use(async (req, res, next) => {
         if (!req.url) return next();
 
-        const pathname = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
+        const requestUrl = new URL(req.url, 'http://localhost');
+        const pathname = decodeURIComponent(requestUrl.pathname);
 
         if (pathname === '/index.js') {
           req.url = '/src/main.tsx';
@@ -23,7 +24,7 @@ function originalPages(): Plugin {
           return next();
         }
 
-        if (pathname === '/' || !pathname.endsWith('/')) return next();
+        if (pathname === '/') return next();
 
         const publicRoot = path.resolve(__dirname, 'public');
         const relativePath = pathname.replace(/^\/+|\/+$/g, '');
@@ -31,6 +32,13 @@ function originalPages(): Plugin {
 
         if (!pagePath.startsWith(`${publicRoot}${path.sep}`) || !existsSync(pagePath)) {
           return next();
+        }
+
+        if (!pathname.endsWith('/')) {
+          res.statusCode = 308;
+          res.setHeader('Location', `${requestUrl.pathname}/${requestUrl.search}`);
+          res.end();
+          return;
         }
 
         try {
