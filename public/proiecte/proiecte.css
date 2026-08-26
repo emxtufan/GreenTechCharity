@@ -436,7 +436,11 @@ button {
 
 .project-hero__visual {
   position: relative;
+  display: grid;
+  place-items: center;
   align-self: center;
+  justify-self: center;
+  width: min(100%, 42rem, 68svh);
   margin: 0;
   isolation: isolate;
 }
@@ -452,7 +456,8 @@ button {
 }
 
 .project-hero__visual img {
-  width: min(100%, 54rem);
+  width: 100%;
+  height: auto;
   margin-inline: auto;
   filter: drop-shadow(0 2rem 2.5rem rgba(8, 45, 32, .08));
   transition: transform 1s var(--ease-out);
@@ -727,7 +732,7 @@ button {
 .project-callout {
   display: grid;
   grid-template-columns: minmax(20rem, .8fr) minmax(24rem, 1.2fr);
-  min-height: clamp(42rem, 74svh, 58rem);
+  min-height: clamp(36rem, 68svh, 49rem);
   color: var(--cream-light);
   background: var(--forest-deep);
   overflow: hidden;
@@ -750,7 +755,8 @@ button {
 }
 
 .project-callout__visual img {
-  width: min(88%, 47rem);
+  width: min(76%, 35rem, 58svh);
+  height: auto;
   filter: drop-shadow(0 2rem 3rem rgba(0, 0, 0, .16));
 }
 
@@ -967,7 +973,7 @@ button {
 .project-drawer__hero {
   display: grid;
   grid-template-columns: minmax(22rem, .83fr) minmax(25rem, 1.17fr);
-  min-height: min(52rem, calc(100dvh - 5.2rem));
+  min-height: min(44rem, calc(100dvh - 5.2rem));
 }
 
 .project-drawer__intro {
@@ -1007,14 +1013,16 @@ button {
   display: grid;
   min-height: 100%;
   margin: 0;
+  padding: clamp(1.5rem, 2.5vw, 2.75rem) clamp(1.25rem, 2.4vw, 2.5rem) clamp(4.25rem, 5vw, 5.25rem);
   place-items: center;
   background: var(--cream);
   overflow: hidden;
 }
 
 .project-drawer__figure img {
-  width: min(88%, 42rem);
-  max-height: 80%;
+  width: min(74%, 30rem, 58svh);
+  height: auto;
+  max-height: none;
   object-fit: contain;
   transition: opacity .25s ease, transform .45s var(--ease-out);
 }
@@ -1267,11 +1275,11 @@ button {
   }
 
   .project-hero h1 {
-    max-width: 12ch;
+    max-width: 18ch;
   }
 
   .project-hero__visual {
-    width: min(100%, 39rem);
+    width: min(84vw, 31rem, 58svh);
     margin-inline: auto;
   }
 
@@ -1332,10 +1340,20 @@ button {
 
   .project-callout {
     grid-template-columns: 1fr;
+    min-height: 0;
   }
 
   .project-callout__visual {
-    min-height: 22rem;
+    min-height: clamp(20rem, 62vw, 30rem);
+    padding-block: clamp(1.5rem, 5vw, 3rem);
+  }
+
+  .project-callout__visual img {
+    width: min(72vw, 27rem, 46svh);
+  }
+
+  .project-callout__copy {
+    padding-block: clamp(3.5rem, 10vw, 5.5rem);
   }
 
   .project-callout__visual::after {
@@ -1361,6 +1379,7 @@ button {
 
   .project-drawer__hero {
     grid-template-columns: 1fr;
+    min-height: auto;
   }
 
   .project-drawer__intro {
@@ -1368,7 +1387,12 @@ button {
   }
 
   .project-drawer__figure {
-    min-height: 29rem;
+    min-height: clamp(20rem, 56vw, 25rem);
+    padding: clamp(1.25rem, 4vw, 2rem) 1.25rem clamp(3.8rem, 8vw, 4.5rem);
+  }
+
+  .project-drawer__figure img {
+    width: min(66vw, 22rem, 44svh);
   }
 
   .project-drawer__detail,
@@ -1423,8 +1447,12 @@ button {
     padding-bottom: 4.5rem;
   }
 
+  .project-hero__visual {
+    width: min(84vw, 21.5rem, 58svh);
+  }
+
   .project-hero h1 {
-    font-size: clamp(3.65rem, 18vw, 5.6rem);
+    font-size: clamp(3.65rem, 12vw, 5.6rem);
   }
 
   .project-hero__actions,
@@ -1468,6 +1496,10 @@ button {
     min-height: 19rem;
   }
 
+  .project-callout__visual img {
+    width: min(72vw, 18.5rem, 46svh);
+  }
+
   .page-footer__statement > p:last-child {
     font-size: clamp(3.9rem, 18vw, 6rem);
   }
@@ -1501,7 +1533,11 @@ button {
   }
 
   .project-drawer__figure {
-    min-height: 22rem;
+    min-height: clamp(19rem, 82vw, 20rem);
+  }
+
+  .project-drawer__figure img {
+    width: min(68vw, 15.5rem, 40svh);
   }
 
   .project-drawer__gallery {

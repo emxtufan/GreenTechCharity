@@ -1,8 +1,18 @@
 (function () {
   'use strict';
 
-  const modal = document.getElementById('bb-outro-modal');
+  const footerSurface = document.querySelector('[data-bb-footer-interactions]');
+  const standaloneSurface = document.querySelector('[data-bb-standalone-interactions]');
+  const modal = footerSurface?.querySelector('#bb-footer-modal') ||
+    standaloneSurface?.querySelector('#bb-outro-modal');
   if (!modal) return;
+
+  const isFooterSurface = modal.id === 'bb-footer-modal';
+  const interactionRoot = isFooterSurface ? footerSurface : standaloneSurface;
+  const openAttribute = isFooterSurface ? 'data-bb-footer-modal-open' : 'data-bb-modal-open';
+  const closeAttribute = isFooterSurface ? 'data-bb-footer-modal-close' : 'data-bb-modal-close';
+  const bodyStateClass = isFooterSurface ? 'bb-footer-modal-open' : 'bb-modal-open';
+  const modalDescriptionId = isFooterSurface ? 'bb-footer-modal-description' : 'bb-modal-description';
 
   const modalTitle = modal.querySelector('[data-bb-modal-title]');
   const modalEyebrow = modal.querySelector('[data-bb-modal-eyebrow]');
@@ -50,17 +60,16 @@
     const identity = fieldIdentity('consent');
     const copy = kind === 'newsletter'
       ? 'Sunt de acord sa primesc prin e-mail noutati despre proiecte si oportunitati de implicare.'
-      : 'Sunt de acord ca datele introduse sa fie folosite exclusiv pentru gestionarea acestei solicitari.';
+      : 'Sunt de acord ca datele introduse sa fie folosite doar pentru solutionarea acestei solicitari.';
     return '<div class="bb-form__consent bb-form__field--full">' +
       '<input id="' + identity.id + '" type="checkbox" name="consent" aria-describedby="' + identity.errorId + '" required>' +
       '<label for="' + identity.id + '">' + copy + '</label>' +
-      '<a class="bb-form__privacy" href="/impressum/" target="_top">Informatii despre date</a>' +
       '<small id="' + identity.errorId + '" class="bb-form__error"></small>' +
     '</div>';
   }
 
   function formShell(kind, intro, fields, note) {
-    return '<p id="bb-modal-description" class="bb-modal__lead">' + intro + '</p>' +
+    return '<p id="' + modalDescriptionId + '" class="bb-modal__lead">' + intro + '</p>' +
       (note || '') +
       '<form class="bb-form" data-bb-form="' + kind + '" novalidate>' +
         '<input type="hidden" name="form_type" value="' + kind + '">' +
@@ -77,7 +86,7 @@
   const MODALS = {
     donation: {
       eyebrow: 'Implicare / Donatie',
-      title: 'Sustine un camin',
+      title: 'Sustine urmatorul camin',
       render: function () {
         const options =
           '<option value="">Alege frecventa</option>' +
@@ -86,9 +95,9 @@
           '<option value="materiale">Donatie de materiale sau servicii</option>';
         const projects =
           '<option value="">Alege directia</option>' +
-          '<option value="prioritar">Catre nevoia prioritara</option>' +
-          '<option value="casa">Casa sustenabila</option>' +
-          '<option value="energie">Energie curata</option>' +
+          '<option value="prioritar">Catre etapa prioritara</option>' +
+          '<option value="casa">Constructia caminului</option>' +
+          '<option value="energie">Eficienta energetica</option>' +
           '<option value="spatiu-verde">Spatiu verde si sigur</option>';
         const fields =
           inputField('name', 'Nume complet *', 'text', 'required minlength="2" autocomplete="name"', false) +
@@ -100,15 +109,15 @@
           textareaField('message', 'Mesaj sau detalii', 'rows="3" maxlength="800" placeholder="Spune-ne daca vrei sa sustii o etapa sau o resursa anume."');
         return formShell(
           'donation',
-          'Alege forma de sprijin potrivita. Nu solicitam date de card in acest formular; plata sau predarea resurselor se stabileste numai prin canalul oficial al organizatiei.',
+          'Alege cum vrei sa sustii urmatorul camin. Formularul nu colecteaza date de card; dupa trimitere, echipa iti comunica proiectul si pasii siguri de plata sau predare.',
           fields,
-          '<div class="bb-modal__notice"><strong>Transparenta inainte de plata</strong><span>Vei primi detaliile proiectului, destinatia contributiei si pasii urmatori inainte de orice transfer.</span></div>'
+          '<div class="bb-modal__notice"><strong>Impact verificabil</strong><span>Inaintea transferului primesti destinatia contributiei, etapa sustinuta si modul in care va fi raportat rezultatul.</span></div>'
         );
       }
     },
     volunteer: {
       eyebrow: 'Implicare / Voluntariat',
-      title: 'Timpul tau poate construi',
+      title: 'Priceperea ta poate construi',
       render: function () {
         const skills =
           '<option value="">Alege aria principala</option>' +
@@ -116,7 +125,7 @@
           '<option value="arhitectura">Arhitectura si proiectare</option>' +
           '<option value="logistica">Logistica si organizare</option>' +
           '<option value="comunicare">Comunicare si continut</option>' +
-          '<option value="sprijin-familie">Activitati pentru familie</option>' +
+          '<option value="sprijin-familie">Sprijin pentru familie</option>' +
           '<option value="alta">Alta competenta</option>';
         const availability =
           '<option value="">Alege disponibilitatea</option>' +
@@ -134,9 +143,9 @@
           textareaField('message', 'Experienta si motivatia ta *', 'required rows="4" minlength="20" maxlength="1200" placeholder="Spune-ne pe scurt ce stii sa faci si cum ai vrea sa te implici."');
         return formShell(
           'volunteer',
-          'Potrivim fiecare voluntar cu o etapa concreta, astfel incat timpul oferit sa produca un rezultat sigur si vizibil.',
+          'Potrivim fiecare voluntar cu o nevoie concreta a proiectului, astfel incat timpul si experienta oferite sa produca un rezultat sigur si util.',
           fields,
-          '<div class="bb-modal__notice"><strong>Implicare responsabila</strong><span>Rolul, programul si regulile de siguranta sunt confirmate inaintea fiecarei activitati.</span></div>'
+          '<div class="bb-modal__notice"><strong>Implicare responsabila</strong><span>Rolul, programul, coordonatorul si regulile de siguranta sunt confirmate inaintea fiecarei activitati.</span></div>'
         );
       }
     },
@@ -163,15 +172,15 @@
           textareaField('message', 'Propunerea ta *', 'required rows="4" minlength="30" maxlength="1500" placeholder="Descrie resursele, expertiza sau directia de colaborare propusa."');
         return formShell(
           'partner',
-          'Parteneriatele reunesc resurse, expertiza si incredere. Pornim fiecare colaborare cu obiective, responsabilitati si rezultate clar definite.',
+          'Unim finantare, materiale, servicii si expertiza pentru a construi locuinte sustenabile. Fiecare colaborare porneste cu obiective, responsabilitati si rezultate masurabile.',
           fields,
-          '<div class="bb-modal__notice"><strong>Parteneriat documentat</strong><span>Contributiile, etapele si raportarea impactului sunt stabilite transparent de la inceput.</span></div>'
+          '<div class="bb-modal__notice"><strong>Impact documentat</strong><span>Contributiile, etapele si rezultatele sunt definite si raportate transparent de la inceput.</span></div>'
         );
       }
     },
-    contact: {
+    'footer-contact': {
       eyebrow: 'Organizatie / Contact',
-      title: 'Hai sa vorbim',
+      title: 'Vorbeste cu echipa noastra',
       render: function () {
         const subjects =
           '<option value="">Alege subiectul</option>' +
@@ -186,17 +195,17 @@
           inputField('email', 'E-mail *', 'email', 'required autocomplete="email"', false) +
           inputField('phone', 'Telefon', 'tel', 'pattern="[0-9+() .-]{7,}" autocomplete="tel"', false) +
           selectField('subject', 'Subiect *', subjects, 'required', false) +
-          textareaField('message', 'Mesaj *', 'required rows="5" minlength="20" maxlength="1500" placeholder="Scrie-ne cu ce te putem ajuta."');
+          textareaField('message', 'Mesaj *', 'required rows="5" minlength="20" maxlength="1500" placeholder="Spune-ne pe scurt cum te putem ajuta."');
         return formShell(
           'contact',
-          'Trimite-ne intrebarea ta, iar aceasta va fi directionata catre echipa potrivita.',
+          'Ai o intrebare despre un proiect, o familie sprijinita sau o forma de implicare? Mesajul tau va ajunge la echipa potrivita.',
           fields,
           ''
         );
       }
     },
     newsletter: {
-      eyebrow: 'Comunitate / Newsletter',
+      eyebrow: 'Comunitate / Noutati',
       title: 'Urmareste progresul',
       render: function () {
         const interests =
@@ -212,9 +221,9 @@
           selectField('interest', 'Interes principal *', interests, 'required', true);
         return formShell(
           'newsletter',
-          'Primeste actualizari relevante despre proiecte, etape de constructie, impact si moduri concrete de implicare.',
+          'Primeste actualizari despre familiile sprijinite, etapele de constructie, folosirea resurselor si oportunitatile de implicare.',
           fields,
-          '<div class="bb-modal__notice"><strong>Fara zgomot inutil</strong><span>Doar actualizari despre proiecte si impact. Dezabonarea va fi disponibila in fiecare mesaj.</span></div>'
+          '<div class="bb-modal__notice"><strong>Doar informatii relevante</strong><span>Trimitem numai noutati despre proiecte si impact. Te poti dezabona din orice mesaj.</span></div>'
         );
       }
     },
@@ -222,35 +231,34 @@
       eyebrow: 'Organizatie / Despre noi',
       title: 'Casa cu casa',
       render: function () {
-        return '<p id="bb-modal-description" class="bb-modal__lead">GREENTECH Charity transforma sprijinul comunitatii in locuinte sustenabile pentru familii aflate in dificultate.</p>' +
+        return '<p id="' + modalDescriptionId + '" class="bb-modal__lead">GREENTECH Charity transforma sprijinul comunitatii in locuinte sustenabile pentru familii aflate in dificultate.</p>' +
           '<div class="bb-about__principles">' +
-            '<article><span>01</span><h3>Oameni</h3><p>Pornim de la nevoile reale ale familiei si pastram demnitatea in centrul fiecarei decizii.</p></article>' +
-            '<article><span>02</span><h3>Sustenabilitate</h3><p>Construim pentru siguranta, consum redus, intretinere simpla si o viata lunga a locuintei.</p></article>' +
-            '<article><span>03</span><h3>Transparenta</h3><p>Facem vizibile etapele, resursele si rezultatul fiecarui proiect.</p></article>' +
+            '<article><span>01</span><h3>Oameni</h3><p>Pornim de la nevoile reale ale fiecarei familii si pastram demnitatea in centrul deciziilor.</p></article>' +
+            '<article><span>02</span><h3>Sustenabilitate</h3><p>Construim locuinte sigure, eficiente, usor de intretinut si pregatite sa dureze.</p></article>' +
+            '<article><span>03</span><h3>Transparenta</h3><p>Aratam clar etapele, resursele folosite si rezultatul fiecarui proiect.</p></article>' +
           '</div>' +
           '<div class="bb-about__process">' +
-            '<p><span>Ascultam</span> intelegem situatia familiei.</p>' +
+            '<p><span>Ascultam</span> intelegem nevoile familiei.</p>' +
             '<p><span>Proiectam</span> alegem solutia potrivita.</p>' +
-            '<p><span>Construim</span> coordonam resursele si specialistii.</p>' +
-            '<p><span>Raportam</span> aratam progresul si impactul.</p>' +
+            '<p><span>Construim</span> coordonam specialistii si resursele.</p>' +
+            '<p><span>Raportam</span> publicam progresul si impactul.</p>' +
           '</div>' +
           '<div class="bb-modal__actions">' +
             '<a href="/proiecte/" target="_top">Vezi proiectele <span>&nearr;</span></a>' +
-            '<a href="/impressum/" target="_top">Transparenta <span>&nearr;</span></a>' +
           '</div>';
       }
     },
     social: {
-      eyebrow: 'Comunitate / Social media',
+      eyebrow: 'Comunitate / Retele sociale',
       title: 'Da misiunea mai departe',
       render: function () {
-        return '<p id="bb-modal-description" class="bb-modal__lead">Distribuie proiectele GREENTECH Charity prin canalul pe care il folosesti. Nu afisam profiluri oficiale pana cand acestea nu sunt configurate si verificate.</p>' +
+        return '<p id="' + modalDescriptionId + '" class="bb-modal__lead">Distribuie proiectele GREENTECH Charity si ajuta-ne sa aducem urmatorul camin mai aproape de o familie care are nevoie.</p>' +
           '<div class="bb-share">' +
-            '<button type="button" data-bb-share="native"><span>Distribuie</span><small>Aplicatiile de pe dispozitiv</small><i>&nearr;</i></button>' +
-            '<button type="button" data-bb-share="linkedin"><span>LinkedIn</span><small>Distribuie profesional</small><i>&nearr;</i></button>' +
-            '<button type="button" data-bb-share="facebook"><span>Facebook</span><small>Trimite comunitatii</small><i>&nearr;</i></button>' +
-            '<button type="button" data-bb-share="whatsapp"><span>WhatsApp</span><small>Trimite unui contact</small><i>&nearr;</i></button>' +
-            '<button type="button" data-bb-share="copy"><span>Copiaza linkul</span><small>Pastreaza sau trimite direct</small><i>&nearr;</i></button>' +
+            '<button type="button" data-bb-share="native"><span>Distribuie</span><small>Alege aplicatia preferata</small><i>&nearr;</i></button>' +
+            '<button type="button" data-bb-share="linkedin"><span>LinkedIn</span><small>Trimite misiunea retelei tale</small><i>&nearr;</i></button>' +
+            '<button type="button" data-bb-share="facebook"><span>Facebook</span><small>Distribuie in comunitatea ta</small><i>&nearr;</i></button>' +
+            '<button type="button" data-bb-share="whatsapp"><span>WhatsApp</span><small>Trimite direct unei persoane</small><i>&nearr;</i></button>' +
+            '<button type="button" data-bb-share="copy"><span>Copiaza linkul</span><small>Pastreaza sau trimite linkul</small><i>&nearr;</i></button>' +
           '</div>' +
           '<p class="bb-share__status" role="status" aria-live="polite"></p>';
       }
@@ -267,17 +275,17 @@
     if (!slug || !form) return;
 
     const labels = {
-      'camin-eficient': 'Camin eficient',
-      'energie-cu-sens': 'Energie cu sens',
-      'spatii-vii': 'Spatii vii',
-      'reteaua-care-construieste': 'Reteaua care construieste'
+      'camin-eficient': 'Locuinta sigura',
+      'energie-cu-sens': 'Energie pentru camin',
+      'spatii-vii': 'Curte pentru familie',
+      'reteaua-care-construieste': 'Comunitatea care construieste'
     };
     const label = labels[slug] || slug;
     const context = document.createElement('p');
     const hidden = document.createElement('input');
 
     context.className = 'bb-modal__context';
-    context.textContent = 'Initiativa selectata: ' + label;
+    context.textContent = 'Directia selectata: ' + label;
     modalContent.querySelector('.bb-modal__lead')?.insertAdjacentElement('afterend', context);
 
     hidden.type = 'hidden';
@@ -312,12 +320,12 @@
     modalContent.innerHTML = definition.render();
     modalContent.scrollTop = 0;
     applyProjectContext(trigger);
-    document.body.classList.add('bb-modal-open');
+    document.body.classList.add(bodyStateClass);
     modal.showModal();
-    modal.querySelector('.bb-modal__close')?.focus({preventScroll: true});
 
     window.requestAnimationFrame(function () {
       modal.classList.add('is-open');
+      modal.querySelector('.bb-modal__close')?.focus({preventScroll: true});
     });
   }
 
@@ -334,7 +342,7 @@
       modal.close();
       modal.classList.remove('is-closing');
       modalContent.innerHTML = '';
-      document.body.classList.remove('bb-modal-open');
+      document.body.classList.remove(bodyStateClass);
       closing = false;
       opener?.focus?.({preventScroll: true});
       opener = null;
@@ -447,7 +455,7 @@
 
   function showSuccess(kind, result) {
     const titles = {
-      donation: 'Intentia ta de sprijin a fost trimisa.',
+      donation: 'Intentia ta de donatie a fost trimisa.',
       volunteer: 'Inscrierea ta a fost trimisa.',
       partner: 'Propunerea de parteneriat a fost trimisa.',
       contact: 'Mesajul tau a fost trimis.',
@@ -455,14 +463,14 @@
     };
     const reference = result?.id || result?.reference || '';
     modalContent.innerHTML =
-      '<div id="bb-modal-description" class="bb-success" tabindex="-1">' +
+      '<div id="' + modalDescriptionId + '" class="bb-success" tabindex="-1">' +
         '<span class="bb-success__icon" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="m10 25 9 9 19-21"/></svg></span>' +
         '<p class="bb-success__kicker">Confirmare</p>' +
         '<h3>' + (titles[kind] || 'Solicitarea a fost trimisa.') + '</h3>' +
-        '<p>Datele au fost preluate prin canalul securizat. Echipa GREENTECH Charity va continua procesul conform tipului solicitarii.</p>' +
+        '<p>Am inregistrat solicitarea. Echipa GREENTECH Charity va verifica informatiile si va reveni cu pasii potriviti.</p>' +
         (reference ? '<small>Referinta: ' + String(reference).replace(/[<>&"]/g, '') + '</small>' : '') +
         '<div class="bb-modal__actions">' +
-          '<button type="button" data-bb-modal-close>Inchide</button>' +
+          '<button type="button" ' + closeAttribute + '>Inchide</button>' +
           '<a href="/proiecte/" target="_top">Vezi proiectele <span>&nearr;</span></a>' +
         '</div>' +
       '</div>';
@@ -525,13 +533,13 @@
 
   async function handleShare(type) {
     const url = shareUrl();
-    const text = 'Descopera proiectele GREENTECH Charity: locuinte sustenabile, construite cu transparenta.';
+    const text = 'Descopera cum GREENTECH Charity transforma sprijinul in locuinte sustenabile pentru familii aflate in dificultate.';
     const status = modalContent.querySelector('.bb-share__status');
 
     if (type === 'native' && navigator.share) {
       try {
         await navigator.share({title: 'GREENTECH Charity', text: text, url: url});
-        status.textContent = 'Multumim ca duci misiunea mai departe.';
+        status.textContent = 'Multumim ca ajuti misiunea sa ajunga mai departe.';
       } catch (error) {
         if (error?.name !== 'AbortError') await copyShareLink(status);
       }
@@ -569,15 +577,18 @@
     if (materialsOnly && !amount.value) clearFieldError(amount);
   }
 
-  document.addEventListener('click', function (event) {
-    const trigger = event.target.closest('[data-bb-modal-open]');
+  interactionRoot.addEventListener('click', function (event) {
+    const target = event.target instanceof Element ? event.target : null;
+    if (!target) return;
+
+    const trigger = target.closest('[' + openAttribute + ']');
     if (trigger) {
       event.preventDefault();
-      openModal(trigger.dataset.bbModalOpen, trigger);
+      openModal(trigger.getAttribute(openAttribute), trigger);
       return;
     }
 
-    if (event.target.closest('[data-bb-modal-close]')) {
+    if (target.closest('[' + closeAttribute + ']')) {
       event.preventDefault();
       closeModal();
       return;
@@ -625,11 +636,14 @@
     }
   });
 
-  window.GreentechCharityFooter = {
+  const publicApi = {
     open: function (name) {
       openModal(name, document.activeElement);
     },
     close: closeModal,
     isOpen: isModalOpen
   };
+
+  if (isFooterSurface) window.GreentechCharityBrandbookFooter = publicApi;
+  else window.GreentechCharityStandaloneForms = publicApi;
 })();

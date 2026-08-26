@@ -54,6 +54,121 @@ export default function App() {
   const childRingAnchor = useRef<PortalAnchor>({x: 0.5, y: 0.5, radius: 180});
 
   useEffect(() => {
+    const legacyContactRoute = '/contact/';
+    const transparencyRoute = '/transparenta/';
+    const routes = (window as Window & {__ROUTES__?: string[]}).__ROUTES__;
+    if (routes && !routes.includes(legacyContactRoute)) routes.push(legacyContactRoute);
+
+    const menu = document.querySelector<HTMLElement>('._68f6d6 ._68695a');
+    if (!menu || menu.dataset.gcPersistentNavReady === 'true') return;
+    menu.dataset.gcPersistentNavReady = 'true';
+
+    const baseHeaderItems = Array.from(menu.children).filter(
+      (item): item is HTMLElement =>
+        item instanceof HTMLElement &&
+        item.matches('._2680ad[data-in-header="true"]'),
+    );
+
+    const snapshots = baseHeaderItems.map((item) => ({
+      item,
+      className: item.className,
+      style: item.getAttribute('style'),
+      inHeader: item.dataset.inHeader,
+      anchorClassName: item.querySelector('a')?.className ?? '',
+    }));
+
+    const createPersistentTab = (route: string, label: string, marker: string) => {
+      const tab = document.createElement('div');
+      tab.className = '_2680ad _0ca877 _f722b9';
+      tab.dataset.inHeader = 'true';
+      tab.dataset.pathname = route;
+      tab.setAttribute(marker, 'true');
+      tab.innerHTML = `
+      <a href="${route}" class="_2bb0cd _7423af" aria-label="${label} GREENTECH Charity">
+        <span class="_14690a" aria-hidden="true">
+          <svg class="_6c8233" viewBox="0 0 101 101" xmlns="http://www.w3.org/2000/svg">
+            <path d="M2.5 50.5C2.50001 23.9903 23.9903 2.50001 50.5 2.50001C77.0097 2.50001 98.5 23.9903 98.5 50.5C98.5 77.0097 77.0097 98.5 50.5 98.5C23.9903 98.5 2.5 77.0097 2.5 50.5Z" vector-effect="non-scaling-stroke" />
+            <path class="_19c712" d="M50.5 16.55V84.45" vector-effect="non-scaling-stroke" />
+            <path d="M84.4502 50.5L16.5502 50.5" vector-effect="non-scaling-stroke" />
+          </svg>
+        </span>
+        <span class="_5862ff"><span class="_fc3732">${label}</span></span>
+      </a>
+      <div class="_9bef0c"></div>
+    `;
+      return tab;
+    };
+
+    const legacyContactTab = createPersistentTab(
+      legacyContactRoute,
+      'Contact',
+      'data-gc-legacy-contact-tab',
+    );
+    const existingTransparencyTab = menu.querySelector<HTMLElement>(
+      `._2680ad[data-pathname="${transparencyRoute}"]`,
+    );
+    const transparencySnapshot = existingTransparencyTab
+      ? {
+          className: existingTransparencyTab.className,
+          style: existingTransparencyTab.getAttribute('style'),
+          inHeader: existingTransparencyTab.dataset.inHeader,
+          anchorClassName: existingTransparencyTab.querySelector('a')?.className ?? '',
+          nextSibling: existingTransparencyTab.nextSibling,
+        }
+      : null;
+    const transparencyTab = existingTransparencyTab ?? createPersistentTab(
+      transparencyRoute,
+      'Transparenta',
+      'data-gc-transparency-tab',
+    );
+
+    transparencyTab.setAttribute('data-gc-transparency-tab', 'true');
+    menu.appendChild(legacyContactTab);
+    menu.appendChild(transparencyTab);
+
+    const persistentTabs = [...baseHeaderItems, legacyContactTab, transparencyTab];
+    const activeIndex = persistentTabs.findIndex(
+      (item) => item.dataset.pathname === window.location.pathname,
+    );
+
+    persistentTabs.forEach((item, index) => {
+      item.classList.add('_0ca877');
+      item.dataset.inHeader = 'true';
+      item.style.setProperty('--offset', String(persistentTabs.length - index));
+      item.style.setProperty('--index', String(index));
+      item.classList.toggle('_5257f8', activeIndex >= index);
+      item.querySelector('a')?.classList.toggle('_5a376b', activeIndex === index);
+    });
+
+    return () => {
+      legacyContactTab.remove();
+      snapshots.forEach(({item, className, style, inHeader, anchorClassName}) => {
+        item.className = className;
+        if (style === null) item.removeAttribute('style');
+        else item.setAttribute('style', style);
+        if (inHeader === undefined) delete item.dataset.inHeader;
+        else item.dataset.inHeader = inHeader;
+        const anchor = item.querySelector('a');
+        if (anchor) anchor.className = anchorClassName;
+      });
+      if (transparencySnapshot) {
+        transparencyTab.className = transparencySnapshot.className;
+        if (transparencySnapshot.style === null) transparencyTab.removeAttribute('style');
+        else transparencyTab.setAttribute('style', transparencySnapshot.style);
+        if (transparencySnapshot.inHeader === undefined) delete transparencyTab.dataset.inHeader;
+        else transparencyTab.dataset.inHeader = transparencySnapshot.inHeader;
+        transparencyTab.removeAttribute('data-gc-transparency-tab');
+        const anchor = transparencyTab.querySelector('a');
+        if (anchor) anchor.className = transparencySnapshot.anchorClassName;
+        menu.insertBefore(transparencyTab, transparencySnapshot.nextSibling);
+      } else {
+        transparencyTab.remove();
+      }
+      delete menu.dataset.gcPersistentNavReady;
+    };
+  }, []);
+
+  useEffect(() => {
     void import('./greencube-runtime.js');
   }, []);
 
@@ -332,10 +447,82 @@ export default function App() {
           transition: opacity .35s linear;
         }
 
+        [data-gc-legacy-contact] .gc-legacy-contact__page {
+          align-content: start;
+        }
+
+        [data-gc-legacy-contact] .gc-legacy-contact__intro {
+          max-width: 34rem;
+        }
+
+        [data-gc-legacy-contact] .gc-legacy-contact__kicker {
+          display: block;
+          margin-bottom: 1.2rem;
+          font-size: var(--text-xs);
+          font-style: normal;
+          font-weight: 700;
+          letter-spacing: .16em;
+          text-transform: uppercase;
+        }
+
+        [data-gc-legacy-contact] .gc-legacy-contact__list {
+          display: grid;
+          align-content: start;
+          font-style: normal;
+          border-bottom: 1px solid currentColor;
+        }
+
+        [data-gc-legacy-contact] .gc-legacy-contact__row {
+          display: grid;
+          grid-template-columns: minmax(7rem, .4fr) minmax(0, 1fr);
+          gap: var(--space);
+          align-items: start;
+          padding-block: calc(var(--space) * 1.25);
+          border-top: 1px solid currentColor;
+        }
+
+        [data-gc-legacy-contact] .gc-legacy-contact__row > span {
+          padding-top: .35em;
+          font-size: var(--text-xs);
+          font-weight: 700;
+          letter-spacing: .12em;
+          text-transform: uppercase;
+        }
+
+        [data-gc-legacy-contact] .gc-legacy-contact__row > a,
+        [data-gc-legacy-contact] .gc-legacy-contact__row > strong {
+          font-family: Garamond, serif;
+          font-size: var(--title-s);
+          font-style: normal;
+          font-weight: 400;
+          line-height: .95;
+          overflow-wrap: anywhere;
+          text-decoration: none;
+        }
+
+        [data-gc-legacy-contact] .gc-legacy-contact__row > a {
+          transition: opacity .2s linear;
+        }
+
+        @media (pointer: fine) {
+          [data-gc-legacy-contact] .gc-legacy-contact__row > a:hover {
+            opacity: .58;
+          }
+        }
+
         @media (orientation: portrait) and (max-width: 1100px) {
           .greentech-scroll-hint {
-            bottom: calc(var(--column) * 2 + var(--space) * 2);
+            bottom: calc(var(--column) * 4 + var(--space) * 2);
             font-size: 16px;
+          }
+
+          [data-gc-legacy-contact] .gc-legacy-contact__row {
+            grid-template-columns: minmax(0, 1fr);
+            gap: .35rem;
+          }
+
+          [data-gc-legacy-contact] .gc-legacy-contact__row > span {
+            padding-top: 0;
           }
         }
       `}</style>
@@ -344,7 +531,7 @@ export default function App() {
         className={`greentech-scroll-hint${showScrollHint && sectionPhase === 'house' ? ' is-visible' : ''}`}
         aria-hidden={!showScrollHint || sectionPhase !== 'house'}
       >
-        Scroll down
+        Deruleaza in jos
       </div>
 
       <section

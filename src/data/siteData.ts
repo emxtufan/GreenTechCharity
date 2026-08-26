@@ -1,11 +1,27 @@
 import { Language, PageData, PoiItemData, HistoryItem } from '../types';
 
 const createPoiItems = (): PoiItemData[] => [
-  { title: 'Sprijin pentru familii', href: '/wohnen/', position: [-3.5, 3.2, 0.5] },
-  { title: 'Casa sustenabila', href: '/architektur/', position: [-1.2, 4.5, -2.1] },
-  { title: 'Energie si mediu', href: '/nachhaltigkeit/', position: [2.1, 3.8, 1.2] },
-  { title: 'Comunitatea', href: '/lage/', position: [3.8, 2.5, -1.8] },
-  { title: 'Impact si transparenta', href: '/wohnungen/', position: [0.5, 5.8, -0.8] },
+  {
+    title: 'Familia este punctul de plecare',
+    href: '/sprijin-pentru-familii/',
+    position: [-3.5, 3.2, 0.5],
+  },
+  {
+    title: 'O casa gandita pe termen lung',
+    href: '/casa-sustenabila/',
+    position: [-1.2, 4.5, -2.1],
+  },
+  {
+    title: 'Energie care reduce costurile',
+    href: '/confort-si-siguranta/',
+    position: [2.1, 3.8, 1.2],
+  },
+  { title: 'Construim impreuna', href: '/voluntariat/', position: [3.8, 2.5, -1.8] },
+  {
+    title: 'Impact pe care il poti urmari',
+    href: '/impact/',
+    position: [0.5, 5.8, -0.8],
+  },
 ];
 
 export const POI_ITEMS: Record<Language, PoiItemData[]> = {
@@ -15,10 +31,10 @@ export const POI_ITEMS: Record<Language, PoiItemData[]> = {
 
 const historyItems: HistoryItem[] = [
   { year: '01', text: 'Ascultam familia si evaluam nevoile reale' },
-  { year: '02', text: 'Proiectam locuinta si publicam bugetul' },
+  { year: '02', text: 'Proiectam locuinta si publicam obiectivul si bugetul' },
   { year: '03', text: 'Construim cu materiale durabile' },
-  { year: '04', text: 'Predam un camin sigur si eficient' },
-  { year: '05', text: 'Masuram si publicam impactul' },
+  { year: '04', text: 'Predam caminul si sprijinim mutarea' },
+  { year: '05', text: 'Urmarim consumul si publicam rezultatele' },
 ];
 
 export const HISTORY_ITEMS: Record<Language, HistoryItem[]> = {
@@ -30,49 +46,49 @@ const createPagesData = (): Record<string, PageData> => ({
   index: {
     id: 'page_projekt',
     uid: 'index',
-    title: 'Misiunea noastra',
+    title: 'Construim siguranta, casa cu casa',
     color: 'sand',
     facts: [
       {
-        title: 'Oameni',
-        text: 'Pornim de la nevoile reale ale familiilor aflate in dificultate.',
+        title: 'Familia',
+        text: 'Ascultam, verificam nevoia si stabilim impreuna prioritatile.',
         column: 'Left',
       },
       {
-        title: 'Sustenabilitate',
-        text: 'Construim locuinte eficiente energetic, sigure si usor de intretinut.',
+        title: 'Caminul',
+        text: 'Proiectam o locuinta sigura, eficienta si usor de intretinut.',
         column: 'Left',
       },
       {
-        title: 'Transparenta',
-        text: 'Aratam clar cum fiecare contributie devine parte dintr-un camin.',
+        title: 'Increderea',
+        text: 'Publicam obiectivul, bugetul, progresul si rezultatul proiectului.',
         column: 'Right',
       },
     ],
     paragraphs: [
-      'GREENTECH Charity construieste locuinte sustenabile pentru familii aflate in dificultate. Fiecare proiect aduce siguranta, costuri mai mici si sansa unui nou inceput.',
-      'Reunim donatori, voluntari si specialisti pentru a transforma sprijinul comunitatii in impact concret si usor de urmarit.',
+      'GREENTECH Charity transforma contributiile comunitatii in locuinte sustenabile pentru familii aflate in dificultate.',
+      'Reunim familia, donatorii, voluntarii si specialistii intr-un proces clar, de la evaluarea nevoii pana la predarea caminului.',
     ],
     links: [
-      { text: 'Vezi proiectele', url: '#' },
-      { text: 'Afla cum poti ajuta', url: '#' },
+      { text: 'Vezi proiectele', url: '/procesul-proiectului/' },
+      { text: 'Afla cum poti ajuta', url: '/voluntariat/' },
     ],
   },
   wohnen: {
     id: 'page_wohnen',
     uid: 'wohnen',
-    title: 'Sprijin pentru familii',
+    title: 'Familia este punctul de plecare',
     color: 'lemon',
     pointOfInterest: true,
     facts: [
       {
         title: 'Nevoie reala',
-        text: 'Selectam responsabil cazurile si intelegem situatia fiecarei familii.',
+        text: 'Verificam responsabil situatia si intelegem prioritatile familiei.',
         column: 'Left',
       },
       {
         title: 'Demnitate',
-        text: 'Construim un spatiu sigur, cald si adaptat vietii de zi cu zi.',
+        text: 'Construim un spatiu sigur si adaptat vietii de zi cu zi.',
         column: 'Left',
       },
       {
@@ -82,14 +98,14 @@ const createPagesData = (): Record<string, PageData> => ({
       },
     ],
     paragraphs: [
-      'O locuinta stabila poate schimba directia unei familii. Sprijinul nostru incepe cu ascultare, continua cu un plan clar si se incheie doar atunci cand casa devine un camin.',
+      'Nu pornim de la un model de casa, ci de la oamenii care vor locui in ea. Sprijinul incepe cu ascultare, continua cu un plan clar si ramane activ dupa predarea caminului.',
     ],
     links: [{ text: 'Descopera procesul', url: '#' }],
   },
   architektur: {
     id: 'page_architektur',
     uid: 'architektur',
-    title: 'Casa sustenabila',
+    title: 'O casa gandita pe termen lung',
     color: 'forest',
     pointOfInterest: true,
     facts: [
@@ -110,13 +126,13 @@ const createPagesData = (): Record<string, PageData> => ({
       },
     ],
     paragraphs: [
-      'Fiecare casa GREENTECH Charity este proiectata pentru confort, lumina naturala si consum responsabil. Designul ramane simplu, functional si usor de intretinut.',
+      'Fiecare locuinta GREENTECH Charity echilibreaza siguranta, costurile de utilizare si impactul asupra mediului. Alegem solutii care ajuta familia zi de zi.',
     ],
   },
   nachhaltigkeit: {
     id: 'page_nachhaltigkeit',
     uid: 'nachhaltigkeit',
-    title: 'Energie si mediu',
+    title: 'Energie care reduce costurile',
     color: 'lemon',
     pointOfInterest: true,
     facts: [
@@ -137,13 +153,13 @@ const createPagesData = (): Record<string, PageData> => ({
       },
     ],
     paragraphs: [
-      'Sustenabilitatea inseamna beneficii reale pentru familie: o casa mai sanatoasa, facturi mai mici si un impact redus asupra mediului.',
+      'Eficienta energetica inseamna temperatura stabila, cheltuieli mai usor de sustinut si un impact redus asupra mediului.',
     ],
   },
   lage: {
     id: 'page_lage',
     uid: 'lage',
-    title: 'Comunitatea',
+    title: 'Construim impreuna',
     color: 'sand',
     pointOfInterest: true,
     facts: [
@@ -164,13 +180,13 @@ const createPagesData = (): Record<string, PageData> => ({
       },
     ],
     paragraphs: [
-      'O casa durabila se construieste mai bine atunci cand comunitatea lucreaza impreuna. GREENTECH Charity coordoneaza acest efort si face progresul vizibil.',
+      'Donatorii, voluntarii, specialistii si partenerii locali au roluri clare in acelasi proiect. GREENTECH Charity coordoneaza contributiile si face progresul vizibil.',
     ],
   },
   wohnungen: {
     id: 'page_wohnungen',
     uid: 'wohnungen',
-    title: 'Impact si transparenta',
+    title: 'Impact pe care il poti urmari',
     color: 'lemon',
     pointOfInterest: true,
     facts: [
@@ -191,21 +207,22 @@ const createPagesData = (): Record<string, PageData> => ({
       },
     ],
     paragraphs: [
-      'Transparenta transforma increderea in parteneriat. Pentru fiecare proiect prezentam nevoia, resursele, lucrarile realizate si rezultatul final.',
+      'Pentru fiecare proiect prezentam nevoia documentata, bugetul, progresul lucrarilor si rezultatul final, respectand confidentialitatea familiei.',
     ],
-    links: [{ text: 'Vezi impactul', url: '#' }],
+    links: [{ text: 'Vezi impactul', url: '/impact/' }],
   },
   kontakt: {
     id: 'page_kontakt',
     uid: 'kontakt',
-    title: 'Implica-te',
+    title: 'Contact',
     color: 'forest',
     paragraphs: [
-      'Poti sustine GREENTECH Charity printr-o donatie, voluntariat sau un parteneriat. Orice resursa oferita responsabil poate deveni ajutor concret pentru o familie.',
+      'Sediu: Calea Floreasca 194, Sector 1, 014472 Bucuresti, Romania.',
+      'E-mail: office@greentechpro.ro',
     ],
     links: [
-      { text: 'Doneaza', url: '#' },
-      { text: 'Devino partener', url: '#' },
+      { text: 'Trimite un e-mail', url: 'mailto:office@greentechpro.ro' },
+      { text: 'Site web GREENTECH', url: 'https://greentechpro.ro/' },
     ],
   },
   news: {
@@ -215,7 +232,7 @@ const createPagesData = (): Record<string, PageData> => ({
     color: 'sand',
     news: true,
     paragraphs: [
-      'Urmareste etapele proiectelor GREENTECH Charity si vezi cum sprijinul comunitatii se transforma in locuinte sustenabile.',
+      'Urmareste traseul unui proiect GREENTECH Charity, de la evaluarea nevoii pana la predarea caminului si publicarea rezultatelor.',
     ],
   },
 });

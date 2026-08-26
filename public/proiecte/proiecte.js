@@ -7,97 +7,97 @@
     'camin-eficient': {
       index: 1,
       category: 'Locuire',
-      title: 'Camin eficient',
-      summary: 'O directie de interventie pentru locuinte mai sigure, mai confortabile si mai usor de intretinut.',
-      description: 'Inainte de orice interventie, ascultam familia si intelegem felul in care este folosita locuinta. Evaluarea tehnica, prioritatile umane si resursele disponibile sunt puse impreuna intr-un plan realist, care evita solutiile standard aplicate fara context.',
-      tags: ['Confort', 'Siguranta', 'Eficienta'],
+      title: 'Locuinta sigura',
+      summary: 'Proiectam si construim un camin adaptat familiei, cu spatii sigure, confortabile si usor de intretinut.',
+      description: 'Pornim de la situatia locativa a familiei si de la evaluarile tehnice ale amplasamentului. Arhitectii si specialistii transforma aceste date intr-un proiect realist, cu prioritati, buget, materiale si responsabilitati clare. Interventiile sunt confirmate tehnic inainte de executie si documentate pe parcurs.',
+      tags: ['Siguranta', 'Confort', 'Durabilitate'],
       process: [
-        'Ascultam familia si definim impreuna nevoile prioritare.',
-        'Evaluam locuinta si identificam interventiile potrivite contextului.',
-        'Construim un plan clar de implementare, resurse si responsabilitati.',
-        'Documentam rezultatul si lectiile utile pentru initiative viitoare.'
+        'Verificam eligibilitatea si intelegem nevoile familiei.',
+        'Evaluam amplasamentul sau constructia si stabilim riscurile.',
+        'Definitivam proiectul, bugetul si calendarul de executie.',
+        'Construim, verificam si predam locuinta cu documentatia necesara.'
       ],
       impact: [
-        'Un spatiu mai sigur si mai potrivit vietii de zi cu zi.',
-        'Mai mult control asupra confortului si consumului locuintei.',
-        'Solutii gandite pentru utilizare si intretinere pe termen lung.'
+        'Receptia tehnica finalizata si documentata.',
+        'Spatii predate conform nevoilor validate impreuna cu familia.',
+        'Instructiuni de utilizare si intretinere oferite la predare.'
       ],
       gallery: [
-        {src: 'ring1.webp', alt: 'Casa sustenabila integrata intr-un peisaj verde', caption: 'Locuirea privita ca un sistem: casa, energie, natura si comunitate.'},
-        {src: 'stage6/earth.webp', alt: 'Peisaj sustenabil cu locuinte si energie regenerabila', caption: 'Interventii care urmaresc echilibrul dintre confort si resurse.'},
-        {src: 'ring211.webp', alt: 'Detaliu ilustrat cu o locuinta Greentech Charity', caption: 'Fiecare decizie porneste de la nevoile reale ale familiei.'}
+        {src: 'ring1.webp', alt: 'Casa sustenabila integrata intr-un peisaj verde', caption: 'Casa reuneste intr-un singur proiect siguranta, eficienta, spatiul verde si nevoile familiei.'},
+        {src: 'stage6/earth.webp', alt: 'Peisaj sustenabil cu locuinte si energie regenerabila', caption: 'Performanta locuintei este gandita impreuna cu felul in care familia o va folosi.'},
+        {src: 'ring211.webp', alt: 'Detaliu ilustrat cu o locuinta GREENTECH Charity', caption: 'Fiecare alegere este justificata prin nevoie, buget si durata de utilizare.'}
       ]
     },
     'energie-cu-sens': {
       index: 2,
       category: 'Energie',
-      title: 'Energie cu sens',
-      summary: 'Exploram solutii responsabile care pot sustine confortul unei familii si un consum mai atent.',
-      description: 'Nu pornim de la tehnologie, ci de la situatia concreta a locuintei. Analizam consumul, comportamentul cladirii si optiunile relevante, apoi propunem doar masurile care pot fi intelese, folosite si intretinute responsabil.',
-      tags: ['Consum responsabil', 'Energie curata', 'Claritate'],
+      title: 'Energie pentru camin',
+      summary: 'Integram eficienta energetica si surse regenerabile acolo unde analiza tehnica le confirma utilitatea.',
+      description: 'Analizam anvelopa, orientarea, consumul estimat si echipamentele necesare. Alegem izolatia, tamplaria, sistemele si eventualele surse regenerabile dupa performanta, cost de exploatare, mentenanta si durata de viata, nu pentru efect vizual.',
+      tags: ['Eficienta energetica', 'Surse regenerabile', 'Costuri controlate'],
       process: [
-        'Intelegem consumul si punctele in care locuinta pierde resurse.',
-        'Comparam solutii potrivite cladirii, familiei si contextului local.',
-        'Prioritizam interventiile cu utilitate clara si intretinere realista.',
-        'Explicam utilizarea si urmarim felul in care solutia functioneaza.'
+        'Estimam necesarul real de energie al casei.',
+        'Identificam pierderile si prioritatile de eficientizare.',
+        'Comparam solutiile dupa performanta, cost si mentenanta.',
+        'Urmarim consumul dupa punerea in functiune si raportam rezultatele.'
       ],
       impact: [
-        'Un consum mai usor de inteles si de gestionat.',
-        'Mai putina presiune generata de pierderile inutile de energie.',
-        'Alegeri tehnice legate direct de confortul familiei.'
+        'Consumul urmarit si comparat cu estimarea proiectului.',
+        'Echipamentele si lucrarile consemnate in documentatia tehnica.',
+        'Familia instruita pentru folosirea si intretinerea sistemelor.'
       ],
       gallery: [
-        {src: 'ring2.webp', alt: 'Peisaj cu panouri solare, turbine eoliene si locuinta', caption: 'Energia regenerabila integrata intr-o imagine completa a locuirii.'},
-        {src: 'stage6/earth.webp', alt: 'Comunitate verde cu panouri solare si turbine eoliene', caption: 'Solutiile energetice au sens atunci cand servesc oamenii.'},
-        {src: 'stage2/rightBack.webp', alt: 'Element ilustrat despre sustenabilitate si energie', caption: 'Fiecare tehnologie este evaluata in raport cu nevoia concreta.'}
+        {src: 'ring2.webp', alt: 'Peisaj cu panouri solare, turbine eoliene si locuinta', caption: 'Panourile solare si celelalte sisteme sunt integrate doar dupa validarea tehnica.'},
+        {src: 'stage6/earth.webp', alt: 'Comunitate verde cu panouri solare si turbine eoliene', caption: 'Energia regenerabila completeaza eficienta cladirii; nu o inlocuieste.'},
+        {src: 'stage2/rightBack.webp', alt: 'Element ilustrat despre sustenabilitate si energie', caption: 'Solutia potrivita este cea care ramane utila si usor de intretinut.'}
       ]
     },
     'spatii-vii': {
       index: 3,
-      category: 'Natura',
-      title: 'Spatii vii',
-      summary: 'Regandim spatiul din jurul casei ca loc de siguranta, joaca, odihna si apropiere de natura.',
-      description: 'Un camin nu se termina la usa. Analizam modul in care curtea sau spatiul comun poate deveni mai sigur, mai accesibil si mai viu, fara amenajari fragile sau greu de intretinut. Vegetatia si zonele de folosire sunt alese in functie de oameni si loc.',
-      tags: ['Spatiu verde', 'Stare de bine', 'Biodiversitate'],
+      category: 'Spatiu verde',
+      title: 'Curte pentru familie',
+      summary: 'Amenajam curtea ca extensie a caminului: sigura, accesibila si usor de ingrijit.',
+      description: 'Pornim de la varsta si rutina membrilor familiei, acces, drenaj, umbrire si siguranta. Delimitam circulatia, joaca si odihna, iar plantele sunt alese pentru contextul local si un necesar realist de intretinere.',
+      tags: ['Joaca', 'Accesibilitate', 'Vegetatie'],
       process: [
-        'Observam cum este folosit spatiul si unde apar bariere sau riscuri.',
-        'Definim zone pentru joaca, odihna, circulatie si vegetatie.',
-        'Alegem solutii rezistente, accesibile si usor de ingrijit.',
-        'Implicam comunitatea in folosirea si pastrarea spatiului.'
+        'Observam cum va fi folosit terenul si identificam zonele cu risc.',
+        'Delimitam circulatia, joaca, odihna si suprafetele plantate.',
+        'Alegem materiale si plante potrivite locului si intretinerii disponibile.',
+        'Predam familiei un plan simplu de folosire si ingrijire.'
       ],
       impact: [
-        'Mai mult loc sigur pentru timp petrecut afara.',
-        'O relatie mai fireasca intre casa, oameni si natura.',
-        'Spatii care incurajeaza apropierea si responsabilitatea comuna.'
+        'Zona de joaca separata de circulatia auto.',
+        'Suprafete de acces si odihna realizate conform planului.',
+        'Vegetatie inventariata si plan de ingrijire predat familiei.'
       ],
       gallery: [
-        {src: 'stage6/earth.webp', alt: 'Peisaj sustenabil bogat in vegetatie', caption: 'Natura devine parte din experienta cotidiana a locuirii.'},
-        {src: 'ring1.webp', alt: 'Casa sustenabila inconjurata de natura', caption: 'Spatii gandite pentru oameni, vegetatie si utilizare indelungata.'},
-        {src: 'stage1/center_back.webp', alt: 'Peisaj ilustrat cu dealuri si vegetatie', caption: 'Un exterior bine gandit poate sustine starea de bine.'}
+        {src: 'stage6/earth.webp', alt: 'Peisaj sustenabil bogat in vegetatie', caption: 'Curtea continua viata casei si ofera loc pentru joaca, odihna si vegetatie.'},
+        {src: 'ring1.webp', alt: 'Casa sustenabila inconjurata de natura', caption: 'Amenajarea echilibreaza utilizarea familiei cu intretinerea pe termen lung.'},
+        {src: 'stage1/center_back.webp', alt: 'Peisaj ilustrat cu dealuri si vegetatie', caption: 'Vegetatia este aleasa in functie de teren, clima si resursele de ingrijire.'}
       ]
     },
     'reteaua-care-construieste': {
       index: 4,
       category: 'Comunitate',
-      title: 'Reteaua care construieste',
-      summary: 'Aducem impreuna familii, voluntari, specialisti si parteneri in jurul unui proces bine coordonat.',
-      description: 'Impactul durabil are nevoie de roluri clare si incredere. Pentru fiecare initiativa definim ce expertiza este necesara, cum poate contribui fiecare partener si cum pastram familia implicata in deciziile care ii privesc locuinta.',
+      title: 'Comunitatea care construieste',
+      summary: 'Aducem donatori, voluntari, specialisti si parteneri in jurul aceluiasi plan de constructie.',
+      description: 'Un camin sustenabil are nevoie de competente, materiale, finantare si responsabilitati clare. GREENTECH Charity valideaza contributiile, coordoneaza rolurile si pastreaza familia implicata in deciziile care ii privesc viitoarea locuinta.',
       tags: ['Voluntariat', 'Parteneriate', 'Transparenta'],
       process: [
-        'Definim nevoia si competentele necesare pentru interventie.',
-        'Conectam organizatii, specialisti si voluntari potriviti.',
-        'Stabilim responsabilitati clare si un mod comun de lucru.',
-        'Comunicam progresul si pastram deschis dialogul cu familia.'
+        'Publicam nevoile proiectului si competentele necesare.',
+        'Verificam partenerii si potrivim fiecare contributie cu o etapa.',
+        'Stabilim responsabilitati, termene si puncte de verificare.',
+        'Documentam progresul, folosirea resurselor si rezultatul final.'
       ],
       impact: [
-        'Resurse si competente folosite acolo unde sunt cu adevarat utile.',
-        'Un proces mai coerent pentru familie si pentru cei implicati.',
-        'Relatii de colaborare care pot sustine initiative viitoare.'
+        'Fiecare contributie asociata unei etape si unui responsabil.',
+        'Progresul si folosirea resurselor documentate pe parcurs.',
+        'Rezultatele si lectiile proiectului publicate dupa finalizare.'
       ],
       gallery: [
-        {src: 'ring3.webp', alt: 'Compozitie despre colaborare, arhitectura si sustenabilitate', caption: 'O retea de oameni si competente orientata spre acelasi scop.'},
-        {src: 'stage4/center1.webp', alt: 'Ilustratie despre oameni si constructie colectiva', caption: 'Colaborarea functioneaza cand fiecare rol este clar.'},
-        {src: 'stage3/center.webp', alt: 'Ilustratie despre proiectare si realizare', caption: 'Expertiza devine impact printr-un proces bine coordonat.'}
+        {src: 'ring3.webp', alt: 'Compozitie despre colaborare, arhitectura si sustenabilitate', caption: 'Un camin se construieste prin roluri clare si o directie comuna.'},
+        {src: 'stage4/center1.webp', alt: 'Ilustratie despre oameni si constructie colectiva', caption: 'Voluntariatul completeaza lucrarile profesioniste, fara sa inlocuiasca expertiza necesara.'},
+        {src: 'stage3/center.webp', alt: 'Ilustratie despre proiectare si realizare', caption: 'Proiectarea, executia si raportarea raman conectate de la inceput pana la predare.'}
       ]
     }
   };
@@ -184,7 +184,7 @@
     if (!project || !dialog) return false;
 
     activeSlug = slug;
-    setText('[data-drawer-position]', 'Initiativa 0' + project.index + ' / 04');
+    setText('[data-drawer-position]', 'Directia 0' + project.index + ' / 04');
     setText('[data-drawer-category]', project.category);
     setText('[data-drawer-title]', project.title);
     setText('[data-drawer-summary]', project.summary);
@@ -211,8 +211,7 @@
     var contactAction = dialog.querySelector('[data-drawer-contact]');
     donateAction.href = actionUrl('donate', slug);
     donateAction.dataset.bbProject = slug;
-    contactAction.href = actionUrl('contact', slug);
-    contactAction.dataset.bbProject = slug;
+    contactAction.href = '/contact/';
     document.title = project.title + ' | Proiecte GREENTECH Charity';
     return true;
   }
@@ -245,7 +244,7 @@
     });
 
     var announcer = document.querySelector('[data-project-announcer]');
-    if (announcer) announcer.textContent = 'Ai deschis detaliile initiativei ' + projects[slug].title + '.';
+    if (announcer) announcer.textContent = 'Ai deschis detaliile directiei ' + projects[slug].title + '.';
   }
 
   function closeProject(options) {
@@ -328,7 +327,7 @@
           if (visible) visibleCount += 1;
         });
 
-        result.textContent = visibleCount === 1 ? '1 initiativa' : visibleCount + ' initiative';
+        result.textContent = visibleCount === 1 ? '1 directie' : visibleCount + ' directii';
       });
     });
   }

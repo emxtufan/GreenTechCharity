@@ -244,7 +244,7 @@
   }
 
   function isOutroModalOpen() {
-    return document.getElementById('bb-outro-modal')?.open === true;
+    return document.getElementById('bb-footer-modal')?.open === true;
   }
 
   function focusActiveOutroSection() {
@@ -279,7 +279,7 @@
     if (current) current.textContent = String(safeIndex + 1).padStart(2, '0');
 
     const hint = outro.querySelector('[data-outro-hint]');
-    if (hint) hint.textContent = safeIndex === sections.length - 1 ? 'Scroll up' : 'Scroll down';
+    if (hint) hint.textContent = safeIndex === sections.length - 1 ? 'Deruleaza in sus' : 'Deruleaza in jos';
 
     outro.querySelectorAll('[data-outro-go]').forEach(function (button) {
       const active = Number(button.dataset.outroGo) === safeIndex;

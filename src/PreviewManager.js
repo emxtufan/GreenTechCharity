@@ -174,7 +174,7 @@ var er=Object.defineProperty;var Fe=(t,e)=>{for(var r in e)er(t,r,{get:e[r],enum
 		</div>
 	`}var N={Main:"_b400e8",Hidden:"_289adb",Title:"_8ef264",Visible:"_ea58ee",Claim:"_c3bb59",Inner:"_72681f",Button:"_34fe16",Alternate:"_9a48ec",Lang:"_5ddc80",Over:"_ceae8d",Translate:"_0445ca"};var Qt={label:({node:t,children:e})=>{if(t.data.label==="alternate")return`<span class="${N.Alternate}">${e}</span>`}};function Yt(t){let{intro:{data:{claim:e,button:r}},page:{alternate_languages:o}}=t;return`
 		<div class="${N.Main}">
-			<h1 class="${N.Title}">GreenCube</h1>
+			<h1 class="${N.Title}">GREENTECH</h1>
 			<div class="${N.Claim}">
 				<div class="${N.Inner}">${A({text:e,serializer:Qt})}</div>
 			</div>
