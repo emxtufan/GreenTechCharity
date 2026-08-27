@@ -154,7 +154,7 @@ var er=Object.defineProperty;var Fe=(t,e)=>{for(var r in e)er(t,r,{get:e[r],enum
 		</div>
 	`}function $e(t,e){return e.findIndex(({page:r})=>b.contentRelationship(r)&&r.id===t.id)}function Gt(t){let{header:{lang:e,data:{pages:r}},pages:o,route:i}=t,n=o.filter(c=>$e(c,r)>-1),a=o.sort((c,l)=>$e(c,r)<$e(l,r)?-1:1).filter(c=>c.uid!=="index"),s=a.findIndex(c=>x(c)===i);return`
 		<nav class="${ve.Main}">
-			<a href="/${e}" class="${ve.Logo}"><span>GreenTech</span></a>
+			<a href="/${e}" class="${ve.Logo} gc-brand-logo-link" aria-label="GREENTECH Charity"><img class="gc-brand-logo gc-brand-logo--nav" src="/logo-charity.webp" alt="GREENTECH Charity" width="2418" height="2541"></a>
 			<div class="${ve.Menu}">
 				${a?.map((c,l)=>{let m=!!n.find(({id:p})=>c.id===p);return Zt({page:c,active:m?l<=s:l===s,offset:(l-a.length)*-1,index:n.length-(l-a.length)*-1,inHeader:!!n.find(({id:p})=>c.id===p)})}).join("")}
 			</div>
@@ -174,7 +174,7 @@ var er=Object.defineProperty;var Fe=(t,e)=>{for(var r in e)er(t,r,{get:e[r],enum
 		</div>
 	`}var N={Main:"_b400e8",Hidden:"_289adb",Title:"_8ef264",Visible:"_ea58ee",Claim:"_c3bb59",Inner:"_72681f",Button:"_34fe16",Alternate:"_9a48ec",Lang:"_5ddc80",Over:"_ceae8d",Translate:"_0445ca"};var Qt={label:({node:t,children:e})=>{if(t.data.label==="alternate")return`<span class="${N.Alternate}">${e}</span>`}};function Yt(t){let{intro:{data:{claim:e,button:r}},page:{alternate_languages:o}}=t;return`
 		<div class="${N.Main}">
-			<h1 class="${N.Title}">GREENTECH</h1>
+			<h1 class="${N.Title} gc-brand-logo-title"><img class="gc-brand-logo gc-brand-logo--intro" src="/logo-charity.webp" alt="GREENTECH Charity" width="2418" height="2541"></h1>
 			<div class="${N.Claim}">
 				<div class="${N.Inner}">${A({text:e,serializer:Qt})}</div>
 			</div>

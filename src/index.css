@@ -210,8 +210,9 @@ button {
 }
 ._2680ad{--offset: 0;--border: transparent;position:absolute;top:100%;width:calc(100% - 2px);height:100%;display:grid;z-index:10;border-radius:var(--radius);grid-template-rows:var(--column) minmax(0,1fr);background-color:var(--sand);will-change:transform;transition:transform 0.5s cubic-bezier(0.165, 0.84, 0.44, 1)}
 ._2680ad._5257f8{top:0}
-._2680ad._0ca877{height:calc(100% - var(--column)*var(--index));top:calc(100% - var(--column)*var(--offset));z-index:0}
+._2680ad._0ca877{height:calc(100% - var(--column)*var(--index));top:calc(100% - var(--column)*var(--offset));z-index:0;clip-path:inset(0);transition:clip-path .35s var(--ease-out-cubic);will-change:transform,clip-path}
 ._2680ad._0ca877._5257f8{top:calc(var(--column)*var(--index))}
+._2680ad._0ca877.gc-tab-collapsed{clip-path:inset(0 0 calc(100% - var(--column)) 0);overflow:hidden}
 ._2680ad._f722b9{--border: var(--forest)}
 ._2680ad._6ebb2e{background-color:var(--lemon)}
 ._2680ad._53e7d7{background-color:var(--forest)}
@@ -222,6 +223,7 @@ button {
   ._2680ad._5257f8{top:0;left:0}
   ._2680ad._0ca877{top:0;height:calc(100% - 2px);width:calc(100% - var(--column)*var(--index));left:calc(100% - var(--column)*var(--offset))}
   ._2680ad._0ca877._5257f8{top:0;left:calc(var(--column)*var(--index))}
+  ._2680ad._0ca877.gc-tab-collapsed{width:calc(100% - var(--column)*var(--index));height:calc(100% - 2px);clip-path:inset(0 calc(100% - var(--column)) 0 0)}
   ._2680ad._c047d6{width:calc(100% - var(--column)*4)}
   ._2680ad._c047d6._5257f8{top:0;left:calc(var(--column)*4)}
   ._9bef0c{width:var(--column);height:100%}
@@ -290,4 +292,32 @@ button {
   ._c3bb59._0445ca{transition:transform 1s var(--ease-in-out-cubic);transform:scale(1) translateY(0)}
   ._72681f{font-size:min(var(--title-xl),12vw);writing-mode:unset;transform:none}
   ._34fe16{position:absolute;right:var(--space);height:calc(100% - 2*var(--space));width:var(--column);transform:translate(100%)}
+}
+
+@media (orientation:portrait) and (max-width:700px){
+  :root,._f6ab87{
+    --text-s:clamp(.7rem,3vw,.8rem);
+    --text-m:clamp(.875rem,3.7vw,.975rem);
+    --title-s:clamp(1.2rem,5.5vw,1.45rem);
+    --title-m:clamp(1.85rem,8.4vw,2.3rem);
+    --title-l:clamp(2.5rem,11.7vw,3.25rem);
+    --title-xl:clamp(3.1rem,14.5vw,4.1rem);
+  }
+  ._9d6b51{line-height:1.32}
+  ._9d6b51 h1{line-height:.94;padding-block-end:.38em;overflow-wrap:anywhere}
+  ._9d6b51 h2,._9d6b51 h3{line-height:.98;padding-block-end:.4em}
+  ._9d6b51 p{padding-block-end:1.55em;letter-spacing:.025em}
+  ._9d6b51 li{padding-block-end:.85em;letter-spacing:.025em}
+  ._ab4318{font-size:clamp(1rem,4.5vw,1.2rem)}
+}
+
+.gc-brand-logo{display:block;object-fit:contain}
+.gc-brand-logo-link{width:clamp(72px,7vw,138px);max-width:calc(var(--column)*1.2);line-height:0;padding:0}
+.gc-brand-logo--nav{width:100%;height:auto}
+.gc-brand-logo-title{position:relative;top:clamp(10px,1.2vw,22px);font-size:0;line-height:0;padding-block-end:0}
+.gc-brand-logo--intro{width:auto;height:clamp(150px,12vw,210px);max-width:min(62vw,240px)}
+
+@media (orientation:portrait) and (max-width:700px){
+  .gc-brand-logo-title{top:clamp(38px,10vw,46px)}
+  .gc-brand-logo--intro{width:auto;height:110px;max-width:min(62vw,116px)}
 }

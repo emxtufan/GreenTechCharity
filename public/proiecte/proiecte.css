@@ -1452,7 +1452,14 @@ button {
   }
 
   .project-hero h1 {
-    font-size: clamp(3.65rem, 12vw, 5.6rem);
+    max-width: 15ch;
+    font-size: clamp(3rem, 10.5vw, 4.25rem);
+    line-height: .92;
+  }
+
+  .project-hero__lead {
+    font-size: clamp(.94rem, 3.8vw, 1.04rem);
+    line-height: 1.52;
   }
 
   .project-hero__actions,
@@ -1478,7 +1485,13 @@ button {
 
   .portfolio h2,
   .project-callout h2 {
-    font-size: clamp(3.4rem, 16vw, 5.2rem);
+    font-size: clamp(2.8rem, 12vw, 4.1rem);
+    line-height: .94;
+  }
+
+  .project-card h3 {
+    font-size: clamp(2.1rem, 9.5vw, 3rem);
+    line-height: .96;
   }
 
   .project-card:nth-child(even),
@@ -1501,7 +1514,8 @@ button {
   }
 
   .page-footer__statement > p:last-child {
-    font-size: clamp(3.9rem, 18vw, 6rem);
+    font-size: clamp(3rem, 14vw, 4.5rem);
+    line-height: .92;
   }
 
   .page-footer__links {
@@ -1529,7 +1543,8 @@ button {
   }
 
   .project-drawer h2 {
-    font-size: clamp(4rem, 19vw, 6rem);
+    font-size: clamp(3rem, 14vw, 4.5rem);
+    line-height: .92;
   }
 
   .project-drawer__figure {
@@ -1555,7 +1570,8 @@ button {
 
   .project-drawer__detail h3,
   .project-drawer__impact h3 {
-    font-size: clamp(3.2rem, 15vw, 4.7rem);
+    font-size: clamp(2.5rem, 11.5vw, 3.7rem);
+    line-height: .96;
   }
 
   .project-drawer__cta > div,

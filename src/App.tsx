@@ -137,6 +137,7 @@ export default function App() {
       item.style.setProperty('--offset', String(persistentTabs.length - index));
       item.style.setProperty('--index', String(index));
       item.classList.toggle('_5257f8', activeIndex >= index);
+      item.classList.toggle('gc-tab-collapsed', activeIndex > index);
       item.querySelector('a')?.classList.toggle('_5a376b', activeIndex === index);
     });
 

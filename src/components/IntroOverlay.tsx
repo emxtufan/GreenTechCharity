@@ -41,8 +41,14 @@ export const IntroOverlay: React.FC<IntroOverlayProps> = ({
 
   return (
     <div className={`_b400e8 ${stage === 'hidden' ? '_289adb' : ''}`}>
-      <h1 className={`_8ef264 ${stage !== 'initial' ? '_ea58ee' : ''}`}>
-        GREENTECH
+      <h1 className={`_8ef264 gc-brand-logo-title ${stage !== 'initial' ? '_ea58ee' : ''}`}>
+        <img
+          className="gc-brand-logo gc-brand-logo--intro"
+          src="/logo-charity.webp"
+          alt="GREENTECH Charity"
+          width="2418"
+          height="2541"
+        />
       </h1>
 
       <div

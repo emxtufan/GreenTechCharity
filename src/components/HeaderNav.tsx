@@ -24,11 +24,18 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({
   return (
     <nav className={`_68f6d6 ${visible ? '_e09e15' : ''}`}>
       <div
-        className="_df3134"
+        className="_df3134 gc-brand-logo-link"
         onClick={() => onSelectPage('index')}
         title="Acasa - GREENTECH Charity"
+        aria-label="GREENTECH Charity"
       >
-        <span>GREENTECH</span>
+        <img
+          className="gc-brand-logo gc-brand-logo--nav"
+          src="/logo-charity.webp"
+          alt="GREENTECH Charity"
+          width="2418"
+          height="2541"
+        />
       </div>
 
       <div className="_68695a">
