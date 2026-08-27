@@ -3,104 +3,74 @@
 
   var IMAGE_ROOT = '../brandbook-section/assets/image/';
 
-  var projects = {
+  var PROJECT_SCHEMAS = {
     'camin-eficient': {
       index: 1,
-      category: 'Locuire',
-      title: 'Locuinta sigura',
-      summary: 'Proiectam si construim un camin adaptat familiei, cu spatii sigure, confortabile si usor de intretinut.',
-      description: 'Pornim de la situatia locativa a familiei si de la evaluarile tehnice ale amplasamentului. Arhitectii si specialistii transforma aceste date intr-un proiect realist, cu prioritati, buget, materiale si responsabilitati clare. Interventiile sunt confirmate tehnic inainte de executie si documentate pe parcurs.',
-      tags: ['Siguranta', 'Confort', 'Durabilitate'],
-      process: [
-        'Verificam eligibilitatea si intelegem nevoile familiei.',
-        'Evaluam amplasamentul sau constructia si stabilim riscurile.',
-        'Definitivam proiectul, bugetul si calendarul de executie.',
-        'Construim, verificam si predam locuinta cu documentatia necesara.'
-      ],
-      impact: [
-        'Receptia tehnica finalizata si documentata.',
-        'Spatii predate conform nevoilor validate impreuna cu familia.',
-        'Instructiuni de utilizare si intretinere oferite la predare.'
-      ],
       gallery: [
-        {src: 'ring1.webp', alt: 'Casa sustenabila integrata intr-un peisaj verde', caption: 'Casa reuneste intr-un singur proiect siguranta, eficienta, spatiul verde si nevoile familiei.'},
-        {src: 'stage6/earth.webp', alt: 'Peisaj sustenabil cu locuinte si energie regenerabila', caption: 'Performanta locuintei este gandita impreuna cu felul in care familia o va folosi.'},
-        {src: 'ring211.webp', alt: 'Detaliu ilustrat cu o locuinta GREENTECH Charity', caption: 'Fiecare alegere este justificata prin nevoie, buget si durata de utilizare.'}
+        {copyKey: 'hero', src: 'ring1.webp'},
+        {copyKey: 'context', src: 'stage6/earth.webp'},
+        {copyKey: 'detail', src: 'ring211.webp'}
       ]
     },
     'energie-cu-sens': {
       index: 2,
-      category: 'Energie',
-      title: 'Energie pentru camin',
-      summary: 'Integram eficienta energetica si surse regenerabile acolo unde analiza tehnica le confirma utilitatea.',
-      description: 'Analizam anvelopa, orientarea, consumul estimat si echipamentele necesare. Alegem izolatia, tamplaria, sistemele si eventualele surse regenerabile dupa performanta, cost de exploatare, mentenanta si durata de viata, nu pentru efect vizual.',
-      tags: ['Eficienta energetica', 'Surse regenerabile', 'Costuri controlate'],
-      process: [
-        'Estimam necesarul real de energie al casei.',
-        'Identificam pierderile si prioritatile de eficientizare.',
-        'Comparam solutiile dupa performanta, cost si mentenanta.',
-        'Urmarim consumul dupa punerea in functiune si raportam rezultatele.'
-      ],
-      impact: [
-        'Consumul urmarit si comparat cu estimarea proiectului.',
-        'Echipamentele si lucrarile consemnate in documentatia tehnica.',
-        'Familia instruita pentru folosirea si intretinerea sistemelor.'
-      ],
       gallery: [
-        {src: 'ring2.webp', alt: 'Peisaj cu panouri solare, turbine eoliene si locuinta', caption: 'Panourile solare si celelalte sisteme sunt integrate doar dupa validarea tehnica.'},
-        {src: 'stage6/earth.webp', alt: 'Comunitate verde cu panouri solare si turbine eoliene', caption: 'Energia regenerabila completeaza eficienta cladirii; nu o inlocuieste.'},
-        {src: 'stage2/rightBack.webp', alt: 'Element ilustrat despre sustenabilitate si energie', caption: 'Solutia potrivita este cea care ramane utila si usor de intretinut.'}
+        {copyKey: 'hero', src: 'ring2.webp'},
+        {copyKey: 'context', src: 'stage6/earth.webp'},
+        {copyKey: 'detail', src: 'stage2/rightBack.webp'}
       ]
     },
     'spatii-vii': {
       index: 3,
-      category: 'Spatiu verde',
-      title: 'Curte pentru familie',
-      summary: 'Amenajam curtea ca extensie a caminului: sigura, accesibila si usor de ingrijit.',
-      description: 'Pornim de la varsta si rutina membrilor familiei, acces, drenaj, umbrire si siguranta. Delimitam circulatia, joaca si odihna, iar plantele sunt alese pentru contextul local si un necesar realist de intretinere.',
-      tags: ['Joaca', 'Accesibilitate', 'Vegetatie'],
-      process: [
-        'Observam cum va fi folosit terenul si identificam zonele cu risc.',
-        'Delimitam circulatia, joaca, odihna si suprafetele plantate.',
-        'Alegem materiale si plante potrivite locului si intretinerii disponibile.',
-        'Predam familiei un plan simplu de folosire si ingrijire.'
-      ],
-      impact: [
-        'Zona de joaca separata de circulatia auto.',
-        'Suprafete de acces si odihna realizate conform planului.',
-        'Vegetatie inventariata si plan de ingrijire predat familiei.'
-      ],
       gallery: [
-        {src: 'stage6/earth.webp', alt: 'Peisaj sustenabil bogat in vegetatie', caption: 'Curtea continua viata casei si ofera loc pentru joaca, odihna si vegetatie.'},
-        {src: 'ring1.webp', alt: 'Casa sustenabila inconjurata de natura', caption: 'Amenajarea echilibreaza utilizarea familiei cu intretinerea pe termen lung.'},
-        {src: 'stage1/center_back.webp', alt: 'Peisaj ilustrat cu dealuri si vegetatie', caption: 'Vegetatia este aleasa in functie de teren, clima si resursele de ingrijire.'}
+        {copyKey: 'hero', src: 'stage6/earth.webp'},
+        {copyKey: 'context', src: 'ring1.webp'},
+        {copyKey: 'detail', src: 'stage1/center_back.webp'}
       ]
     },
     'reteaua-care-construieste': {
       index: 4,
-      category: 'Comunitate',
-      title: 'Comunitatea care construieste',
-      summary: 'Aducem donatori, voluntari, specialisti si parteneri in jurul aceluiasi plan de constructie.',
-      description: 'Un camin sustenabil are nevoie de competente, materiale, finantare si responsabilitati clare. GREENTECH Charity valideaza contributiile, coordoneaza rolurile si pastreaza familia implicata in deciziile care ii privesc viitoarea locuinta.',
-      tags: ['Voluntariat', 'Parteneriate', 'Transparenta'],
-      process: [
-        'Publicam nevoile proiectului si competentele necesare.',
-        'Verificam partenerii si potrivim fiecare contributie cu o etapa.',
-        'Stabilim responsabilitati, termene si puncte de verificare.',
-        'Documentam progresul, folosirea resurselor si rezultatul final.'
-      ],
-      impact: [
-        'Fiecare contributie asociata unei etape si unui responsabil.',
-        'Progresul si folosirea resurselor documentate pe parcurs.',
-        'Rezultatele si lectiile proiectului publicate dupa finalizare.'
-      ],
       gallery: [
-        {src: 'ring3.webp', alt: 'Compozitie despre colaborare, arhitectura si sustenabilitate', caption: 'Un camin se construieste prin roluri clare si o directie comuna.'},
-        {src: 'stage4/center1.webp', alt: 'Ilustratie despre oameni si constructie colectiva', caption: 'Voluntariatul completeaza lucrarile profesioniste, fara sa inlocuiasca expertiza necesara.'},
-        {src: 'stage3/center.webp', alt: 'Ilustratie despre proiectare si realizare', caption: 'Proiectarea, executia si raportarea raman conectate de la inceput pana la predare.'}
+        {copyKey: 'hero', src: 'ring3.webp'},
+        {copyKey: 'context', src: 'stage4/center1.webp'},
+        {copyKey: 'detail', src: 'stage3/center.webp'}
       ]
     }
   };
+
+  function formatCopy(template, values) {
+    return String(template || '').replace(/\{([a-z]+)\}/gi, function (match, key) {
+      return Object.prototype.hasOwnProperty.call(values, key) ? String(values[key]) : match;
+    });
+  }
+
+  function initialise() {
+    var content = window.GREENTECH_CHARITY_CONTENT || {};
+    var pageCopy = content.projects || {};
+    var runtimeCopy = pageCopy.runtime || {};
+    var itemCopy = pageCopy.items || {};
+    var projects = {};
+
+    Object.keys(PROJECT_SCHEMAS).forEach(function (slug) {
+      var schema = PROJECT_SCHEMAS[slug];
+      var copy = itemCopy[slug] || {};
+      var galleryCopy = copy.gallery || {};
+      projects[slug] = {
+        index: schema.index,
+        category: copy.category || '',
+        title: copy.title || '',
+        summary: copy.drawerSummary || '',
+        description: copy.detailDescription || '',
+        tags: Array.isArray(copy.tags) ? copy.tags : [],
+        process: Array.isArray(copy.process) ? copy.process : [],
+        impact: Array.isArray(copy.impact) ? copy.impact : [],
+        gallery: schema.gallery.map(function (image) {
+          var imageCopy = galleryCopy[image.copyKey] || {};
+          return {src: image.src, alt: imageCopy.alt || '', caption: imageCopy.caption || ''};
+        })
+      };
+    });
+    var projectTotal = String(Object.keys(PROJECT_SCHEMAS).length).padStart(2, '0');
 
   var dialog = document.querySelector('[data-project-dialog]');
   var dialogScroll = dialog && dialog.querySelector('.project-drawer__scroll');
@@ -161,7 +131,10 @@
 
       button.type = 'button';
       button.className = 'gallery-button';
-      button.setAttribute('aria-label', 'Afiseaza imaginea ' + (index + 1) + ' pentru ' + project.title);
+      button.setAttribute('aria-label', formatCopy(runtimeCopy.galleryButtonAria, {
+        index: index + 1,
+        title: project.title
+      }));
       button.setAttribute('aria-pressed', String(index === 0));
       button.dataset.galleryIndex = String(index);
 
@@ -179,12 +152,19 @@
     });
   }
 
-  function renderProject(slug) {
-    var project = projects[slug];
-    if (!project || !dialog) return false;
+    function renderProject(slug) {
+      var project = projects[slug];
+      if (!project || !dialog) {
+        var unavailableAnnouncer = document.querySelector('[data-project-announcer]');
+        if (unavailableAnnouncer) unavailableAnnouncer.textContent = runtimeCopy.projectUnavailable || '';
+        return false;
+      }
 
-    activeSlug = slug;
-    setText('[data-drawer-position]', 'Directia 0' + project.index + ' / 04');
+      activeSlug = slug;
+      setText('[data-drawer-position]', formatCopy(runtimeCopy.drawerPosition, {
+        current: String(project.index).padStart(2, '0'),
+        total: projectTotal
+      }));
     setText('[data-drawer-category]', project.category);
     setText('[data-drawer-title]', project.title);
     setText('[data-drawer-summary]', project.summary);
@@ -212,7 +192,7 @@
     donateAction.href = actionUrl('donate', slug);
     donateAction.dataset.bbProject = slug;
     contactAction.href = '/contact/';
-    document.title = project.title + ' | Proiecte GREENTECH Charity';
+      document.title = formatCopy(runtimeCopy.projectDocumentTitle, {title: project.title});
     return true;
   }
 
@@ -244,7 +224,9 @@
     });
 
     var announcer = document.querySelector('[data-project-announcer]');
-    if (announcer) announcer.textContent = 'Ai deschis detaliile directiei ' + projects[slug].title + '.';
+      if (announcer) announcer.textContent = formatCopy(runtimeCopy.openedAnnouncement, {
+        title: projects[slug].title
+      });
   }
 
   function closeProject(options) {
@@ -264,7 +246,7 @@
     dialog.close();
     document.body.classList.remove('has-dialog');
     activeSlug = null;
-    document.title = 'Proiecte | GREENTECH Charity';
+      document.title = runtimeCopy.baseDocumentTitle || pageCopy.page?.title || '';
 
     if (lastFocusedElement && document.contains(lastFocusedElement)) {
       lastFocusedElement.focus({preventScroll: true});
@@ -327,7 +309,10 @@
           if (visible) visibleCount += 1;
         });
 
-        result.textContent = visibleCount === 1 ? '1 directie' : visibleCount + ' directii';
+          var resultTemplates = runtimeCopy.filterResult || {};
+          var template = visibleCount === 0 ? resultTemplates.none :
+            visibleCount === 1 ? resultTemplates.one : resultTemplates.other;
+          result.textContent = formatCopy(template, {count: visibleCount});
       });
     });
   }
@@ -377,4 +362,10 @@
   setupFilters();
   setupHeader();
   syncDialogWithUrl();
+
+  }
+
+  var ready = window.GreentechCharityContentReady;
+  if (ready && typeof ready.then === 'function') ready.then(initialise, initialise);
+  else initialise();
 })();

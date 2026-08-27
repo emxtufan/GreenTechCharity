@@ -1,4 +1,5 @@
 import {useCallback, useEffect, useRef, useState} from 'react';
+import {mainContentReady} from './main-content';
 
 type GreencubeScrollProgress = {
   target: number;
@@ -25,6 +26,60 @@ type BrandbookMessage = {
 
 type SectionPhase = 'house' | 'entering' | 'active' | 'leaving';
 
+type WrapperCopy = {
+  navigation: {
+    contact: string;
+    transparency: string;
+    tabAriaTemplate: string;
+  };
+  scrollHint: string;
+  brandbook: {
+    ariaLabel: string;
+    frameTitle: string;
+  };
+};
+
+const EMPTY_WRAPPER_COPY: WrapperCopy = {
+  navigation: {
+    contact: '',
+    transparency: '',
+    tabAriaTemplate: '',
+  },
+  scrollHint: '',
+  brandbook: {
+    ariaLabel: '',
+    frameTitle: '',
+  },
+};
+
+const readString = (value: unknown) => (typeof value === 'string' ? value : '');
+
+const normaliseWrapperCopy = (value: unknown): WrapperCopy => {
+  if (!value || typeof value !== 'object') return EMPTY_WRAPPER_COPY;
+
+  const source = value as {
+    navigation?: Record<string, unknown>;
+    scrollHint?: unknown;
+    brandbook?: Record<string, unknown>;
+  };
+
+  return {
+    navigation: {
+      contact: readString(source.navigation?.contact),
+      transparency: readString(source.navigation?.transparency),
+      tabAriaTemplate: readString(source.navigation?.tabAriaTemplate),
+    },
+    scrollHint: readString(source.scrollHint),
+    brandbook: {
+      ariaLabel: readString(source.brandbook?.ariaLabel),
+      frameTitle: readString(source.brandbook?.frameTitle),
+    },
+  };
+};
+
+const formatCopy = (template: string, values: Record<string, string>) =>
+  template.replace(/\{(\w+)\}/g, (_, key: string) => values[key] ?? '');
+
 // The scroll cascade (zoom -> orbit -> entry) is the only clock: the mask and
 // the 3D camera both read the same `entry` value, so they cannot drift apart.
 const ENTRY_EPSILON = 0.002;
@@ -45,6 +100,7 @@ const smoothstep = (start: number, end: number, value: number) => {
 export default function App() {
   const [showScrollHint, setShowScrollHint] = useState(false);
   const [sectionPhase, setSectionPhase] = useState<SectionPhase>('house');
+  const [wrapperCopy, setWrapperCopy] = useState<WrapperCopy>(EMPTY_WRAPPER_COPY);
   const sectionPhaseRef = useRef<SectionPhase>('house');
   const brandbookReady = useRef(false);
   const brandbookFrameElement = useRef<HTMLIFrameElement>(null);
@@ -54,6 +110,24 @@ export default function App() {
   const childRingAnchor = useRef<PortalAnchor>({x: 0.5, y: 0.5, radius: 180});
 
   useEffect(() => {
+    let active = true;
+    void mainContentReady.then((content) => {
+      if (active) setWrapperCopy(normaliseWrapperCopy(content.wrapper));
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (
+      !wrapperCopy.navigation.contact ||
+      !wrapperCopy.navigation.transparency ||
+      !wrapperCopy.navigation.tabAriaTemplate
+    ) {
+      return;
+    }
+
     const legacyContactRoute = '/contact/';
     const transparencyRoute = '/transparenta/';
     const routes = (window as Window & {__ROUTES__?: string[]}).__ROUTES__;
@@ -83,8 +157,9 @@ export default function App() {
       tab.dataset.inHeader = 'true';
       tab.dataset.pathname = route;
       tab.setAttribute(marker, 'true');
+      const ariaLabel = formatCopy(wrapperCopy.navigation.tabAriaTemplate, {label});
       tab.innerHTML = `
-      <a href="${route}" class="_2bb0cd _7423af" aria-label="${label} GREENTECH Charity">
+      <a href="${route}" class="_2bb0cd _7423af" aria-label="${ariaLabel}">
         <span class="_14690a" aria-hidden="true">
           <svg class="_6c8233" viewBox="0 0 101 101" xmlns="http://www.w3.org/2000/svg">
             <path d="M2.5 50.5C2.50001 23.9903 23.9903 2.50001 50.5 2.50001C77.0097 2.50001 98.5 23.9903 98.5 50.5C98.5 77.0097 77.0097 98.5 50.5 98.5C23.9903 98.5 2.5 77.0097 2.5 50.5Z" vector-effect="non-scaling-stroke" />
@@ -101,7 +176,7 @@ export default function App() {
 
     const legacyContactTab = createPersistentTab(
       legacyContactRoute,
-      'Contact',
+      wrapperCopy.navigation.contact,
       'data-gc-legacy-contact-tab',
     );
     const existingTransparencyTab = menu.querySelector<HTMLElement>(
@@ -113,16 +188,29 @@ export default function App() {
           style: existingTransparencyTab.getAttribute('style'),
           inHeader: existingTransparencyTab.dataset.inHeader,
           anchorClassName: existingTransparencyTab.querySelector('a')?.className ?? '',
+          anchorAriaLabel: existingTransparencyTab.querySelector('a')?.getAttribute('aria-label'),
+          label: existingTransparencyTab.querySelector('._fc3732')?.textContent ?? '',
           nextSibling: existingTransparencyTab.nextSibling,
         }
       : null;
     const transparencyTab = existingTransparencyTab ?? createPersistentTab(
       transparencyRoute,
-      'Transparenta',
+      wrapperCopy.navigation.transparency,
       'data-gc-transparency-tab',
     );
 
     transparencyTab.setAttribute('data-gc-transparency-tab', 'true');
+    const transparencyAnchor = transparencyTab.querySelector('a');
+    const transparencyLabel = transparencyTab.querySelector('._fc3732');
+    if (transparencyAnchor) {
+      transparencyAnchor.setAttribute(
+        'aria-label',
+        formatCopy(wrapperCopy.navigation.tabAriaTemplate, {
+          label: wrapperCopy.navigation.transparency,
+        }),
+      );
+    }
+    if (transparencyLabel) transparencyLabel.textContent = wrapperCopy.navigation.transparency;
     menu.appendChild(legacyContactTab);
     menu.appendChild(transparencyTab);
 
@@ -160,17 +248,25 @@ export default function App() {
         else transparencyTab.dataset.inHeader = transparencySnapshot.inHeader;
         transparencyTab.removeAttribute('data-gc-transparency-tab');
         const anchor = transparencyTab.querySelector('a');
-        if (anchor) anchor.className = transparencySnapshot.anchorClassName;
+        if (anchor) {
+          anchor.className = transparencySnapshot.anchorClassName;
+          if (transparencySnapshot.anchorAriaLabel === null) anchor.removeAttribute('aria-label');
+          else anchor.setAttribute('aria-label', transparencySnapshot.anchorAriaLabel);
+        }
+        const label = transparencyTab.querySelector('._fc3732');
+        if (label) label.textContent = transparencySnapshot.label;
         menu.insertBefore(transparencyTab, transparencySnapshot.nextSibling);
       } else {
         transparencyTab.remove();
       }
       delete menu.dataset.gcPersistentNavReady;
     };
-  }, []);
+  }, [wrapperCopy.navigation]);
 
   useEffect(() => {
-    void import('./greencube-runtime.js');
+    void mainContentReady
+      .then(() => new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve())))
+      .then(() => import('./greencube-runtime.js'));
   }, []);
 
   useEffect(() => {
@@ -532,20 +628,20 @@ export default function App() {
         className={`greentech-scroll-hint${showScrollHint && sectionPhase === 'house' ? ' is-visible' : ''}`}
         aria-hidden={!showScrollHint || sectionPhase !== 'house'}
       >
-        Deruleaza in jos
+        {wrapperCopy.scrollHint}
       </div>
 
       <section
         ref={brandbookSectionElement}
         className={`greentech-brandbook-section${sectionPresent ? ' is-present' : ''}${sectionInteractive ? ' is-interactive' : ''}`}
-        aria-label="Povestea GREENTECH Charity"
+        aria-label={wrapperCopy.brandbook.ariaLabel}
         aria-hidden={!sectionInteractive}
       >
         <iframe
           ref={brandbookFrameElement}
           className="greentech-brandbook-frame"
           src="/brandbook-section/?entry=connected"
-          title="Povestea GREENTECH Charity"
+          title={wrapperCopy.brandbook.frameTitle}
           loading="eager"
           allow="fullscreen"
         />

@@ -218,10 +218,10 @@ const createPagesData = (): Record<string, PageData> => ({
     color: 'forest',
     paragraphs: [
       'Sediu: Calea Floreasca 194, Sector 1, 014472 Bucuresti, Romania.',
-      'E-mail: office@greentechpro.ro',
+      'E-mail: help@greentechcharity.ro',
     ],
     links: [
-      { text: 'Trimite un e-mail', url: 'mailto:office@greentechpro.ro' },
+      { text: 'Trimite un e-mail', url: 'mailto:help@greentechcharity.ro' },
       { text: 'Site web GREENTECH', url: 'https://greentechpro.ro/' },
     ],
   },

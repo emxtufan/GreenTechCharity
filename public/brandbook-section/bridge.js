@@ -279,7 +279,12 @@
     if (current) current.textContent = String(safeIndex + 1).padStart(2, '0');
 
     const hint = outro.querySelector('[data-outro-hint]');
-    if (hint) hint.textContent = safeIndex === sections.length - 1 ? 'Deruleaza in sus' : 'Deruleaza in jos';
+    if (hint) {
+      const navigationCopy = window.GREENTECH_CHARITY_CONTENT?.navigation || {};
+      hint.textContent = safeIndex === sections.length - 1
+        ? navigationCopy.outroScrollUp || ''
+        : navigationCopy.outroScrollDown || '';
+    }
 
     outro.querySelectorAll('[data-outro-go]').forEach(function (button) {
       const active = Number(button.dataset.outroGo) === safeIndex;

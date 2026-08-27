@@ -3546,6 +3546,7 @@ body {
 }
 
 .bb-step7__script span {
+  margin-left: .16em;
   color: var(--step7-blue);
 }
 
@@ -4849,6 +4850,73 @@ body {
 
   .bb-step12__footer {
     width: min(16vw, 260px);
+  }
+}
+
+/* On wide landscape screens the final copy frames the earth instead of
+   covering it: statement on the left, conclusion on the right. */
+@media screen and (min-width: 1200px) and (orientation: landscape) {
+  .bb-step12 {
+    box-sizing: border-box;
+    grid-template-columns:
+      minmax(190px, 1fr)
+      minmax(540px, 2.8fr)
+      minmax(220px, 1.15fr);
+    grid-template-rows: minmax(0, 1fr) auto auto auto minmax(0, 1fr);
+    align-content: stretch;
+    justify-items: stretch;
+    column-gap: clamp(20px, 2vw, 40px);
+    row-gap: clamp(8px, 1.2vh, 18px);
+    padding: clamp(28px, 3.2vw, 64px);
+  }
+
+  .bb-step12__sprout {
+    grid-column: 1;
+    grid-row: 2;
+    justify-self: end;
+    width: clamp(34px, min(2.3vw, 4vh), 50px);
+    height: clamp(34px, min(2.3vw, 4vh), 50px);
+    margin: 0 0 clamp(-3px, -.25vh, -1px);
+  }
+
+  .bb-step12 .bb-step12__title {
+    grid-column: 1;
+    grid-row: 3;
+    width: 100%;
+    max-width: none;
+    font-size: clamp(33px, min(2.55vw, 4.55vh), 52px);
+    line-height: 1.04;
+    text-align: right !important;
+    white-space: normal;
+  }
+
+  .bb-step12__divider {
+    grid-column: 1;
+    grid-row: 4;
+    justify-self: end;
+    width: 100%;
+    max-width: 220px;
+    margin-top: 0;
+  }
+
+  .bb-step12 .bb-step12__copy {
+    grid-column: 3;
+    grid-row: 3;
+    align-self: center;
+    width: 100%;
+    max-width: none;
+    font-size: clamp(18px, min(1.45vw, 2.45vh), 28px);
+    line-height: 1.42;
+    text-align: left !important;
+    white-space: normal;
+  }
+
+  .bb-step12__footer {
+    grid-column: 3;
+    grid-row: 4;
+    justify-self: start;
+    width: 100%;
+    max-width: 220px;
   }
 }
 

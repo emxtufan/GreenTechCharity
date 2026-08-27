@@ -3,9 +3,37 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#fbfaf4">
-  <meta name="description" content="Footer GREENTECH Charity: proiecte, donatii, voluntariat, parteneriate si contact.">
-  <title>GREENTECH Charity | Implica-te</title>
+<!-- gc-site-metadata:start -->
+<meta name="description" content="Footer GREENTECH Charity: proiecte, donatii, voluntariat, parteneriate si contact." data-bb-content-meta="wrapper.footer.page.description">
+<meta name="robots" content="noindex,follow" data-bb-content-meta="wrapper.footer.page.robots">
+<meta name="theme-color" content="#1f3a27" data-bb-content-meta="siteMeta.themeColor">
+<meta name="color-scheme" content="light">
+<meta name="application-name" content="GREENTECH Charity" data-bb-content-meta="siteMeta.applicationName">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="GREENTECH Charity" data-bb-content-meta="siteMeta.applicationName">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="ro_RO" data-bb-content-meta="siteMeta.locale">
+<meta property="og:site_name" content="GREENTECH Charity" data-bb-content-meta="siteMeta.name">
+<meta property="og:title" content="GREENTECH Charity | Implica-te" data-bb-content-meta="wrapper.footer.page.title">
+<meta property="og:description" content="Footer GREENTECH Charity: proiecte, donatii, voluntariat, parteneriate si contact." data-bb-content-meta="wrapper.footer.page.description">
+<meta property="og:image" content="https://greentechcharity.ro/social-preview.png">
+<meta property="og:image:width" content="1200" data-bb-content-meta="siteMeta.social.imageWidth">
+<meta property="og:image:height" content="630" data-bb-content-meta="siteMeta.social.imageHeight">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:alt" content="Simbolul GREENTECH Charity pe fundalul identitatii vizuale." data-bb-content-meta="siteMeta.social.imageAlt">
+<meta name="twitter:card" content="summary_large_image" data-bb-content-meta="siteMeta.social.twitterCard">
+<meta name="twitter:title" content="GREENTECH Charity | Implica-te" data-bb-content-meta="wrapper.footer.page.title">
+<meta name="twitter:description" content="Footer GREENTECH Charity: proiecte, donatii, voluntariat, parteneriate si contact." data-bb-content-meta="wrapper.footer.page.description">
+<meta name="twitter:image" content="https://greentechcharity.ro/social-preview.png">
+<meta name="twitter:image:alt" content="Simbolul GREENTECH Charity pe fundalul identitatii vizuale." data-bb-content-meta="siteMeta.social.imageAlt">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180">
+<link rel="manifest" href="/site.webmanifest">
+<!-- gc-site-metadata:end --><title data-bb-content="wrapper.footer.page.title">GREENTECH Charity | Implica-te</title>
+  <script defer src="/brandbook-section/content-loader.js"></script>
   <style>
     html,
     body {
@@ -30,8 +58,31 @@
   <iframe
     class="footer-frame"
     src="/brandbook-section/?entry=footer"
-    title="Footer GREENTECH Charity"
+    title=""
+    data-footer-content="wrapper.footer.frameTitle"
     loading="eager"
   ></iframe>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      function readPath(source, path) {
+        return String(path || '').split('.').reduce(function (value, key) {
+          return value == null ? undefined : value[key];
+        }, source);
+      }
+
+      function applyAttributes(content) {
+        document.querySelectorAll('[data-footer-content]').forEach(function (element) {
+          var value = readPath(content, element.dataset.footerContent);
+          if (value == null) return;
+          if (element.tagName === 'META') element.setAttribute('content', String(value));
+          else element.setAttribute('title', String(value));
+        });
+      }
+
+      var ready = window.GreentechCharityContentReady;
+      if (ready && typeof ready.then === 'function') ready.then(applyAttributes);
+      else applyAttributes(window.GREENTECH_CHARITY_CONTENT || {});
+    });
+  </script>
 </body>
 </html>
