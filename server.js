@@ -63,6 +63,18 @@ if (production) {
     setHeaders(res, filePath) {
       if (filePath.endsWith('.html')) {
         res.setHeader('Cache-Control', 'no-cache');
+        return;
+      }
+
+      if (filePath.endsWith('stage-worker.js') || filePath.endsWith('index.js')) {
+        res.setHeader('Cache-Control', 'no-cache');
+        return;
+      }
+
+      if (filePath.endsWith('.glb')) {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        res.setHeader('CDN-Cache-Control', 'public, max-age=31536000, immutable');
+        res.setHeader('Accept-Ranges', 'bytes');
       }
     }
   }));

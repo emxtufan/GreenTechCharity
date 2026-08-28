@@ -544,6 +544,22 @@ export default function App() {
           transition: opacity .35s linear;
         }
 
+        @media (min-width: 1921px) {
+          :root,
+          ._f6ab87 {
+            --space: 20px !important;
+            --column: 120px !important;
+            --text-xs: 12px !important;
+            --text-s: 16px !important;
+            --text-m: 20px !important;
+            --title-s: 60px !important;
+            --title-m: 60px !important;
+            --title-l: 120px !important;
+            --title-xl: 200px !important;
+            --radius: 30px !important;
+          }
+        }
+
         [data-gc-legacy-contact] .gc-legacy-contact__page {
           align-content: start;
         }

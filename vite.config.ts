@@ -1,6 +1,7 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
-import {existsSync, readFileSync} from 'node:fs';
+import {createHash} from 'node:crypto';
+import {closeSync, existsSync, openSync, readFileSync, readSync} from 'node:fs';
 import path from 'path';
 import {defineConfig, type Plugin} from 'vite';
 
@@ -57,8 +58,80 @@ function originalPages(): Plugin {
   };
 }
 
+function fingerprintFile(filePath: string) {
+  const hash = createHash('sha256');
+  const handle = openSync(filePath, 'r');
+  const buffer = Buffer.allocUnsafe(4 * 1024 * 1024);
+
+  try {
+    let bytesRead = 0;
+    while ((bytesRead = readSync(handle, buffer, 0, buffer.length, null)) > 0) {
+      hash.update(buffer.subarray(0, bytesRead));
+    }
+  } finally {
+    closeSync(handle);
+  }
+
+  return hash.digest('hex').slice(0, 16);
+}
+
+function sceneRuntimeTuning(modelVersion: string): Plugin {
+  const runtimePath = path.resolve(__dirname, 'src/greencube-runtime.js').replaceAll('\\', '/');
+  const workerPath = path.resolve(__dirname, 'src/stage-worker.js').replaceAll('\\', '/');
+
+  return {
+    name: 'greentech-scene-runtime-tuning',
+    enforce: 'pre',
+    transform(source, id) {
+      const cleanId = id.split('?')[0].replaceAll('\\', '/');
+      if (cleanId !== runtimePath && cleanId !== workerPath) return null;
+
+      const replacements: Array<[string, string]> = [
+        [
+          '"/greencube-OE4BBULY.glb"',
+          `"/greencube-OE4BBULY.glb?v=${modelVersion}"`,
+        ],
+        [
+          '.to({elapsed:1},6e3).delay(500).easing(',
+          '.to({elapsed:1},3e3).delay(0).easing(',
+        ],
+        [
+          '.to({scale:1},1500).delay(2e3).easing(',
+          '.to({scale:1},900).delay(0).easing(',
+        ],
+      ];
+
+      if (cleanId === runtimePath) {
+        replacements.push([
+          '.easing(vt.Cubic.InOut).to({scroll:.5},4e3)',
+          '.easing(vt.Cubic.InOut).to({scroll:.5},2e3)',
+        ]);
+      }
+
+      let transformed = source;
+      for (const [search, replacement] of replacements) {
+        if (!transformed.includes(search)) {
+          throw new Error(`Nu am gasit secventa de animatie asteptata in ${cleanId}: ${search}`);
+        }
+        transformed = transformed.replace(search, replacement);
+      }
+
+      return {code: transformed, map: null};
+    },
+  };
+}
+
+const modelVersion = fingerprintFile(
+  path.resolve(__dirname, 'public/greencube-OE4BBULY.glb'),
+);
+
 export default defineConfig({
-  plugins: [originalPages(), react(), tailwindcss()],
+  plugins: [
+    sceneRuntimeTuning(modelVersion),
+    originalPages(),
+    react(),
+    tailwindcss(),
+  ],
   appType: 'mpa',
   resolve: {
     alias: {
