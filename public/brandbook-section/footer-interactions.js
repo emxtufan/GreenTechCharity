@@ -318,11 +318,18 @@
 
     function applyProjectContext(trigger) {
       const slug = trigger?.dataset?.bbProject;
+      const intent = trigger?.dataset?.bbIntent;
       const form = modalContent.querySelector('[data-bb-form]');
-      if (!slug || !form) return;
+      if (!form) return;
+
+      if (form.dataset.bbForm === 'contact' && form.elements.subject) {
+        form.elements.subject.value = intent || (slug ? 'proiecte' : '');
+      }
+
+      if (!slug) return;
 
       const contextCopy = runtimeCopy.projectContext || {};
-      const label = content.projects?.items?.[slug]?.title || slug;
+      const label = trigger?.dataset?.bbProjectLabel || content.projects?.items?.[slug]?.title || slug;
       const context = document.createElement('p');
       const hidden = document.createElement('input');
 
@@ -340,15 +347,16 @@
           'camin-eficient': 'casa',
           'energie-cu-sens': 'energie',
           'spatii-vii': 'spatiu-verde',
-          'reteaua-care-construieste': 'prioritar'
+          'reteaua-care-construieste': 'prioritar',
+          'casa-01-prahova': 'casa',
+          'renovare-02-ilfov': 'casa',
+          'energie-03-dambovita': 'energie',
+          'gradina-04-brasov': 'spatiu-verde'
         };
         const projectSelect = form.elements.project;
         if (projectSelect && projectDirections[slug]) projectSelect.value = projectDirections[slug];
       }
 
-      if (form.dataset.bbForm === 'contact' && form.elements.subject) {
-        form.elements.subject.value = 'proiecte';
-      }
     }
 
     function openModal(name, trigger) {

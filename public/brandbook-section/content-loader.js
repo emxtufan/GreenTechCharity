@@ -132,7 +132,7 @@
   }
 
   window.GreentechCharityContentReady = fetch(contentUrl, {
-    cache: 'no-store',
+    cache: 'force-cache',
     signal: requestController.signal
   })
     .then(function (response) {

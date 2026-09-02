@@ -92,6 +92,31 @@ body,
   display: none !important;
 }
 
+/* Standalone starts while every WebGL stage is being constructed. Keep that
+   internal setup frame covered, then reveal the real 1/7 frame only after
+   bridge.js has positioned and rendered stage0. */
+.brandbook-entry-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  background: var(--brandbook-cream);
+  transition: opacity 120ms linear, visibility 0s linear 120ms;
+}
+
+html.bb-entry-pending .brandbook-entry-gate {
+  visibility: visible;
+  opacity: 1;
+  transition: none;
+}
+
+html.bb-entry-ready .brandbook-entry-gate {
+  visibility: hidden;
+  opacity: 0;
+}
+
 /* The original stage toggles this inline during its final cover transition. */
 .gl-white {
   display: none;

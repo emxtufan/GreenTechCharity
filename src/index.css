@@ -294,6 +294,15 @@ button {
   ._34fe16{position:absolute;right:var(--space);height:calc(100% - 2*var(--space));width:var(--column);transform:translate(100%)}
 }
 
+/* Keep the intro statement vertical on phones, including landscape phones. */
+@media (max-width:700px), (max-height:500px) and (pointer:coarse){
+  ._72681f{
+    font-size:min(var(--title-xl),11vh);
+    writing-mode:vertical-rl;
+    transform:rotate(180deg);
+  }
+}
+
 @media (orientation:portrait) and (max-width:700px){
   :root,._f6ab87{
     --text-s:clamp(.7rem,3vw,.8rem);

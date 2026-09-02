@@ -29,6 +29,11 @@ app.disable('x-powered-by');
 app.set('trust proxy', 1);
 app.use(express.json({limit: '64kb'}));
 
+app.get('/healthz', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store, max-age=0');
+  res.status(200).json({status: 'ok', service: 'greentech-charity'});
+});
+
 app.use('/api', (_req, res, next) => {
   res.setHeader('Cache-Control', 'no-store, max-age=0');
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -61,6 +66,11 @@ if (production) {
   app.use(express.static(distRoot, {
     index: 'index.html',
     setHeaders(res, filePath) {
+      if (/[\\/]brandbook-section[\\/]content\.json$/.test(filePath)) {
+        res.setHeader('Cache-Control', 'public, max-age=3600, must-revalidate');
+        return;
+      }
+
       if (filePath.endsWith('.html')) {
         res.setHeader('Cache-Control', 'no-cache');
         return;
@@ -107,3 +117,29 @@ httpServer.listen(port, host, () => {
   const label = production ? 'productie' : 'dezvoltare';
   console.log(`GREENTECH Charity (${label}): http://${host}:${port}`);
 });
+
+let shuttingDown = false;
+
+function shutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`${signal}: serverul se opreste controlat.`);
+
+  const forceTimer = setTimeout(() => {
+    console.error('Oprire fortata dupa expirarea perioadei de gratie.');
+    httpServer.closeAllConnections?.();
+    process.exit(1);
+  }, 15_000);
+  forceTimer.unref();
+
+  httpServer.close((error) => {
+    clearTimeout(forceTimer);
+    if (error) {
+      console.error('Serverul nu s-a putut opri corect.', error);
+      process.exitCode = 1;
+    }
+  });
+}
+
+process.once('SIGTERM', () => shutdown('SIGTERM'));
+process.once('SIGINT', () => shutdown('SIGINT'));

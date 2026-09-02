@@ -27,7 +27,7 @@
   "wrapper": {
     "navigation": {
       "contact": "Contact",
-      "transparency": "Transparenta",
+      "explore": "Exploreaza",
       "tabAriaTemplate": "{label} GREENTECH Charity"
     },
     "scrollHint": "Deruleaza in jos",
@@ -414,9 +414,9 @@
       }
     },
     "footer-contact": {
-      "eyebrow": "Organizatie / Contact",
-      "title": "Vorbeste cu echipa noastra",
-      "intro": "Ai o intrebare despre un proiect, o familie sprijinita sau o forma de implicare? Mesajul tau va ajunge la echipa potrivita.",
+      "eyebrow": "GREENTECH Charity / Implicare",
+      "title": "Cum vrei sa te implici?",
+      "intro": "Doneaza, participa ca voluntar, propune un parteneriat sau scrie-ne despre o nevoie concreta. Alegerea ta trimite solicitarea direct catre echipa potrivita.",
       "fields": {
         "name": {
           "label": "Nume complet *"
@@ -428,20 +428,20 @@
           "label": "Telefon"
         },
         "subject": {
-          "label": "Subiect *",
+          "label": "Alege directia *",
           "options": {
-            "choose": "Alege subiectul",
-            "projects": "Proiecte si beneficiari",
-            "donations": "Donatii",
-            "volunteering": "Voluntariat",
-            "partnerships": "Parteneriate",
+            "choose": "Selecteaza o optiune",
+            "projects": "Am nevoie de sprijin pentru o familie",
+            "donations": "Vreau sa donez",
+            "volunteering": "Vreau sa particip ca voluntar",
+            "partnerships": "Vreau sa propun un parteneriat",
             "press": "Presa si comunicare",
-            "other": "Alt subiect"
+            "other": "Alta solicitare"
           }
         },
         "message": {
-          "label": "Mesaj *",
-          "placeholder": "Spune-ne pe scurt cum te putem ajuta."
+          "label": "Detalii *",
+          "placeholder": "Spune-ne pe scurt ce ai nevoie sau cum ai vrea sa contribui."
         }
       }
     },
@@ -944,7 +944,8 @@
       }
     },
     "runtime": {
-      "loading": "Se incarca..."
+      "loading": "Se incarca...",
+      "loadError": "Scena 3D nu a putut fi incarcata. Reincarca pagina."
     },
     "pages": {
       "home": {

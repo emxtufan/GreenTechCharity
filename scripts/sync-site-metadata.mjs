@@ -16,18 +16,6 @@ if (!site?.name || !site?.baseUrl || !site?.social?.image || !contactEmail || !s
 const mainPages = [
   ['index.html', 'home'],
   ['public/404/index.html', 'notFound'],
-  ['public/casa-sustenabila/index.html', 'sustainableHome'],
-  ['public/confort-si-siguranta/index.html', 'comfortSafety'],
-  ['public/contact/index.html', 'contact'],
-  ['public/doneaza/index.html', 'donate'],
-  ['public/impact/index.html', 'impact'],
-  ['public/povestea-proiectului/index.html', 'story'],
-  ['public/procesul-proiectului/index.html', 'process'],
-  ['public/spatii-verzi/index.html', 'greenSpaces'],
-  ['public/sprijin-pentru-familii/index.html', 'familySupport'],
-  ['public/transparenta/index.html', 'transparency'],
-  ['public/un-camin-sanatos/index.html', 'healthyHome'],
-  ['public/voluntariat/index.html', 'volunteer'],
 ].map(([file, pageKey]) => ({
   file,
   binding: 'gc',
@@ -61,19 +49,20 @@ const pages = [
   },
 ];
 
-const redirects = {
-  'public/24h-pickup/index.html': '/doneaza/',
-  'public/apotheke/index.html': '/sprijin-pentru-familii/',
-  'public/arztpraxis/index.html': '/un-camin-sanatos/',
-  'public/bepflanzung/index.html': '/spatii-verzi/',
-  'public/der-greencube/index.html': '/casa-sustenabila/',
-  'public/drogerie-hotz/index.html': '/confort-si-siguranta/',
-  'public/facts-and-figures/index.html': '/impact/',
-  'public/gebaudegeschichte/index.html': '/povestea-proiectului/',
-  'public/impressum/index.html': '/transparenta/',
-  'public/news/index.html': '/procesul-proiectului/',
-  'public/roboter/index.html': '/voluntariat/',
-};
+const inlineCardIds = [
+  '/confort-si-siguranta/',
+  '/sprijin-pentru-familii/',
+  '/un-camin-sanatos/',
+  '/povestea-proiectului/',
+  '/spatii-verzi/',
+  '/voluntariat/',
+  '/casa-sustenabila/',
+  '/doneaza/',
+  '/transparenta/',
+  '/impact/',
+  '/procesul-proiectului/',
+  '/contact/',
+];
 
 const readPath = (source, valuePath) =>
   String(valuePath).split('.').reduce((value, key) => value?.[key], source);
@@ -189,15 +178,32 @@ async function syncPage(config) {
   await writeFile(filePath, html, 'utf8');
 }
 
-async function syncRedirect(file, targetPath) {
-  const filePath = path.join(projectRoot, file);
+async function cleanRootCardArchitecture() {
+  const filePath = path.join(projectRoot, 'index.html');
   let html = await readFile(filePath, 'utf8');
-  const target = absoluteUrl(targetPath);
-  html = html.replace(/<title>[\s\S]*?<\/title>/i, `<title>Redirectionare | ${escapeText(site.name)}</title>`);
-  html = html.replace(/<link rel="canonical"[^>]*>/i, `<link rel="canonical" href="${escapeAttribute(target)}">`);
-  if (!/<meta name="robots"/i.test(html)) {
-    html = html.replace('<meta charset="utf-8">', '<meta charset="utf-8"><meta name="robots" content="noindex,follow">');
+
+  // Cardurile sunt componente locale. Nu mai pastram prefetch-uri, lista de
+  // rute sau href-uri catre documentele HTML eliminate.
+  html = html.replace(/<link\b[^>]*\brel=["']prefetch["'][^>]*>/gi, '');
+  html = html.replace(/<script>\s*window\.__ROUTES__\s*=\s*\[[\s\S]*?<\/script>/gi, '');
+  html = html.replace(
+    /<div class="_2680ad _6ebb2e"[^>]*data-pathname="\/404\/">[\s\S]*?<div class="_9bef0c"><\/div><\/div>/i,
+    '',
+  );
+
+  for (const cardId of inlineCardIds) {
+    const escapedCardId = cardId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    html = html.replace(
+      new RegExp(`href="${escapedCardId}"`, 'g'),
+      `href="#" data-gc-card-target="${cardId}"`,
+    );
   }
+
+  html = html.replace(
+    '<a href="/" class="_df3134 gc-brand-logo-link"',
+    '<a href="#" data-gc-card-close class="_df3134 gc-brand-logo-link"',
+  );
+
   await writeFile(filePath, html, 'utf8');
 }
 
@@ -246,8 +252,8 @@ async function syncDiscoveryFiles() {
   ]);
 }
 
+await cleanRootCardArchitecture();
 for (const page of pages) await syncPage(page);
-for (const [file, target] of Object.entries(redirects)) await syncRedirect(file, target);
 await syncDiscoveryFiles();
 
-console.log(`Metadata sincronizata pentru ${pages.length} pagini si ${Object.keys(redirects).length} redirecturi.`);
+console.log(`Metadata sincronizata pentru ${pages.length} pagini; cardurile cladirii sunt locale.`);

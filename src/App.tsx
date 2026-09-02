@@ -1,5 +1,21 @@
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {mainContentReady} from './main-content';
+import {
+  STANDALONE_BRANDBOOK_URL,
+  startBrandbookWarmup,
+  waitForBrandbookWarmup,
+} from './brandbook-preload';
+import {
+  BUILDING_CARD_IDS,
+  BuildingCardRegistry,
+} from './components/BuildingCardRegistry';
+import {installHouseCameraExperience} from './house-camera-experience';
+
+declare global {
+  interface Window {
+    __GREENTECH_STAGE_READY__?: boolean;
+  }
+}
 
 type GreencubeScrollProgress = {
   target: number;
@@ -29,10 +45,9 @@ type SectionPhase = 'house' | 'entering' | 'active' | 'leaving';
 type WrapperCopy = {
   navigation: {
     contact: string;
-    transparency: string;
+    explore: string;
     tabAriaTemplate: string;
   };
-  scrollHint: string;
   brandbook: {
     ariaLabel: string;
     frameTitle: string;
@@ -42,10 +57,9 @@ type WrapperCopy = {
 const EMPTY_WRAPPER_COPY: WrapperCopy = {
   navigation: {
     contact: '',
-    transparency: '',
+    explore: '',
     tabAriaTemplate: '',
   },
-  scrollHint: '',
   brandbook: {
     ariaLabel: '',
     frameTitle: '',
@@ -59,17 +73,15 @@ const normaliseWrapperCopy = (value: unknown): WrapperCopy => {
 
   const source = value as {
     navigation?: Record<string, unknown>;
-    scrollHint?: unknown;
     brandbook?: Record<string, unknown>;
   };
 
   return {
     navigation: {
       contact: readString(source.navigation?.contact),
-      transparency: readString(source.navigation?.transparency),
+      explore: readString(source.navigation?.explore),
       tabAriaTemplate: readString(source.navigation?.tabAriaTemplate),
     },
-    scrollHint: readString(source.scrollHint),
     brandbook: {
       ariaLabel: readString(source.brandbook?.ariaLabel),
       frameTitle: readString(source.brandbook?.frameTitle),
@@ -89,6 +101,44 @@ const PORTAL_OPEN_TO = 0.6;
 const FRAME_BLEND_FROM = 0.35;
 const FRAME_BLEND_TO = 0.95;
 const PORTAL_COVER_FROM = 0.9;
+// Tranzitia catre brandbook ramane oprita pana stabilim noul handoff 2D.
+// Astfel pagina principala pastreaza un singur context WebGL pe toate device-urile.
+const ENABLE_BRANDBOOK_TRANSITION = false;
+
+type NavigatorCapabilities = Navigator & {
+  deviceMemory?: number;
+  userAgentData?: {
+    mobile?: boolean;
+  };
+};
+
+const shouldUseStandaloneBrandbook = () => {
+  const sceneOverride = new URLSearchParams(window.location.search).get('scene')?.toLowerCase();
+  if (sceneOverride === 'low') return true;
+  if (sceneOverride === 'high') return false;
+
+  const capabilities = navigator as NavigatorCapabilities;
+  const userAgent = capabilities.userAgent || '';
+  const mobileUserAgent = /Android|iPhone|iPad|iPod|Mobile/i.test(userAgent);
+  const iPadDesktopMode = /Macintosh/i.test(userAgent) && capabilities.maxTouchPoints > 1;
+  const mobileClientHint = capabilities.userAgentData?.mobile === true;
+  const coarseCompactViewport =
+    window.matchMedia('(pointer: coarse)').matches &&
+    window.matchMedia('(max-width: 1100px)').matches;
+  const deviceMemory = Number(capabilities.deviceMemory);
+  const lowMemory = Number.isFinite(deviceMemory) && deviceMemory > 0 && deviceMemory <= 4;
+  const logicalCores = Number(capabilities.hardwareConcurrency);
+  const lowCoreCount = Number.isFinite(logicalCores) && logicalCores > 0 && logicalCores <= 4;
+
+  return (
+    mobileClientHint ||
+    mobileUserAgent ||
+    iPadDesktopMode ||
+    coarseCompactViewport ||
+    lowMemory ||
+    lowCoreCount
+  );
+};
 
 const clamp = (value: number, min = 0, max = 1) => Math.min(max, Math.max(min, value));
 
@@ -97,8 +147,56 @@ const smoothstep = (start: number, end: number, value: number) => {
   return amount * amount * (3 - 2 * amount);
 };
 
+type ScenePoi = {
+  href?: string;
+  position?: string;
+  [key: string]: unknown;
+};
+
+const HOUSE_POI_POSITION_OVERRIDES: Record<string, string> = {
+  '/spatii-verzi/': '-1.232,\n4.40,\n7.114',
+  '/un-camin-sanatos/': '7.555,\n5.50,\n8.161',
+  '/casa-sustenabila/': '6.163,\n1.40,\n7.974',
+};
+
+const COMPACT_HOUSE_POI_POSITION_OVERRIDES: Record<string, string> = {
+  '/spatii-verzi/': '-2.10,\n4.60,\n7.114',
+  '/un-camin-sanatos/': '8.30,\n5.80,\n8.161',
+  '/casa-sustenabila/': '1.50,\n0.50,\n7.974',
+};
+
+const TABLET_HOUSE_POI_POSITION_OVERRIDES: Record<string, string> = {
+  '/spatii-verzi/': '-2.10,\n4.60,\n7.114',
+  '/un-camin-sanatos/': '9.50,\n5.80,\n8.161',
+  '/casa-sustenabila/': '-0.50,\n0.10,\n7.974',
+};
+
+const prepareHousePoiLayout = () => {
+  const poiSource = document.querySelector<HTMLElement>('._64c0f3[data-poi]');
+  if (!poiSource) return;
+
+  try {
+    const positionOverrides = window.matchMedia('(max-width: 599px)').matches
+      ? COMPACT_HOUSE_POI_POSITION_OVERRIDES
+      : window.matchMedia('(max-width: 1100px)').matches
+        ? TABLET_HOUSE_POI_POSITION_OVERRIDES
+        : HOUSE_POI_POSITION_OVERRIDES;
+    const points = JSON.parse(decodeURIComponent(poiSource.dataset.poi || '[]')) as ScenePoi[];
+    points.forEach((point) => {
+      const position = point.href ? positionOverrides[point.href] : undefined;
+      if (position) point.position = position;
+    });
+    poiSource.dataset.poi = encodeURI(JSON.stringify(points));
+  } catch (error) {
+    console.error('[GREENTECH Charity] Pozitiile etichetelor 3D nu au putut fi pregatite.', error);
+  }
+};
+
 export default function App() {
-  const [showScrollHint, setShowScrollHint] = useState(false);
+  // Freeze the profile for this document. Resizes/orientation changes must not
+  // mount or unmount a second WebGL context midway through the 3D journey.
+  const [useStandaloneBrandbook] = useState(shouldUseStandaloneBrandbook);
+  const [sceneReady, setSceneReady] = useState(() => Boolean(window.__GREENTECH_STAGE_READY__));
   const [sectionPhase, setSectionPhase] = useState<SectionPhase>('house');
   const [wrapperCopy, setWrapperCopy] = useState<WrapperCopy>(EMPTY_WRAPPER_COPY);
   const sectionPhaseRef = useRef<SectionPhase>('house');
@@ -108,6 +206,9 @@ export default function App() {
   const entryProgress = useRef(0);
   const portalAnchor = useRef<PortalAnchor>({x: 0.5, y: 0.5, radius: 180});
   const childRingAnchor = useRef<PortalAnchor>({x: 0.5, y: 0.5, radius: 180});
+  const standaloneNavigationStarted = useRef(false);
+
+  useEffect(() => installHouseCameraExperience(), []);
 
   useEffect(() => {
     let active = true;
@@ -120,19 +221,41 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    // Etichetele sunt acum controale locale pentru registrul de carduri. Ele
+    // pastreaza markup-ul si clasele originale, dar nu mai contin URL-uri catre
+    // documente HTML separate.
+    document.querySelectorAll<HTMLElement>('._2680ad[data-pathname]').forEach((tab) => {
+      const cardId = tab.dataset.pathname || '';
+      if (!BUILDING_CARD_IDS.has(cardId)) {
+        if (cardId === '/404/') tab.remove();
+        return;
+      }
+
+      const anchor = tab.querySelector<HTMLAnchorElement>('a');
+      if (!anchor) return;
+      anchor.href = '#';
+      anchor.dataset.gcCardTarget = cardId;
+    });
+
+    const logo = document.querySelector<HTMLAnchorElement>('._68f6d6 > a._df3134');
+    if (logo) {
+      logo.href = '#';
+      logo.dataset.gcCardClose = '';
+    }
+  }, []);
+
+  useEffect(() => {
     if (
       !wrapperCopy.navigation.contact ||
-      !wrapperCopy.navigation.transparency ||
+      !wrapperCopy.navigation.explore ||
       !wrapperCopy.navigation.tabAriaTemplate
     ) {
       return;
     }
 
     const legacyContactRoute = '/contact/';
-    const transparencyRoute = '/transparenta/';
-    const routes = (window as Window & {__ROUTES__?: string[]}).__ROUTES__;
-    if (routes && !routes.includes(legacyContactRoute)) routes.push(legacyContactRoute);
-
+    const transparencySourceRoute = '/transparenta/';
+    const exploreRoute = STANDALONE_BRANDBOOK_URL;
     const menu = document.querySelector<HTMLElement>('._68f6d6 ._68695a');
     if (!menu || menu.dataset.gcPersistentNavReady === 'true') return;
     menu.dataset.gcPersistentNavReady = 'true';
@@ -159,7 +282,7 @@ export default function App() {
       tab.setAttribute(marker, 'true');
       const ariaLabel = formatCopy(wrapperCopy.navigation.tabAriaTemplate, {label});
       tab.innerHTML = `
-      <a href="${route}" class="_2bb0cd _7423af" aria-label="${ariaLabel}">
+      <a href="#" data-gc-card-target="${route}" class="_2bb0cd _7423af" aria-label="${ariaLabel}">
         <span class="_14690a" aria-hidden="true">
           <svg class="_6c8233" viewBox="0 0 101 101" xmlns="http://www.w3.org/2000/svg">
             <path d="M2.5 50.5C2.50001 23.9903 23.9903 2.50001 50.5 2.50001C77.0097 2.50001 98.5 23.9903 98.5 50.5C98.5 77.0097 77.0097 98.5 50.5 98.5C23.9903 98.5 2.5 77.0097 2.5 50.5Z" vector-effect="non-scaling-stroke" />
@@ -179,42 +302,56 @@ export default function App() {
       wrapperCopy.navigation.contact,
       'data-gc-legacy-contact-tab',
     );
-    const existingTransparencyTab = menu.querySelector<HTMLElement>(
-      `._2680ad[data-pathname="${transparencyRoute}"]`,
+    const transparencyTab = menu.querySelector<HTMLElement>(
+      `._2680ad[data-pathname="${transparencySourceRoute}"]`,
     );
-    const transparencySnapshot = existingTransparencyTab
+    const transparencySnapshot = transparencyTab
       ? {
-          className: existingTransparencyTab.className,
-          style: existingTransparencyTab.getAttribute('style'),
-          inHeader: existingTransparencyTab.dataset.inHeader,
-          anchorClassName: existingTransparencyTab.querySelector('a')?.className ?? '',
-          anchorAriaLabel: existingTransparencyTab.querySelector('a')?.getAttribute('aria-label'),
-          label: existingTransparencyTab.querySelector('._fc3732')?.textContent ?? '',
-          nextSibling: existingTransparencyTab.nextSibling,
+          className: transparencyTab.className,
+          style: transparencyTab.getAttribute('style'),
+          inHeader: transparencyTab.dataset.inHeader,
+          anchorClassName: transparencyTab.querySelector('a')?.className ?? '',
         }
       : null;
-    const transparencyTab = existingTransparencyTab ?? createPersistentTab(
-      transparencyRoute,
-      wrapperCopy.navigation.transparency,
-      'data-gc-transparency-tab',
-    );
 
-    transparencyTab.setAttribute('data-gc-transparency-tab', 'true');
-    const transparencyAnchor = transparencyTab.querySelector('a');
-    const transparencyLabel = transparencyTab.querySelector('._fc3732');
-    if (transparencyAnchor) {
-      transparencyAnchor.setAttribute(
-        'aria-label',
-        formatCopy(wrapperCopy.navigation.tabAriaTemplate, {
-          label: wrapperCopy.navigation.transparency,
-        }),
+    // Transparenta ramane un panou editorial de tip eticheta, separat complet
+    // de navigatia laterala persistenta.
+    if (transparencyTab) {
+      transparencyTab.classList.remove('_0ca877', '_f722b9', '_6ebb2e');
+      transparencyTab.classList.add('_c047d6', '_53e7d7');
+      transparencyTab.dataset.inHeader = 'false';
+      const transparencyAnchor = transparencyTab.querySelector('a');
+      transparencyAnchor?.classList.add('_864f6c');
+      transparencyAnchor?.classList.toggle(
+        '_5a376b',
+        window.location.pathname === transparencySourceRoute,
       );
     }
-    if (transparencyLabel) transparencyLabel.textContent = wrapperCopy.navigation.transparency;
-    menu.appendChild(legacyContactTab);
-    menu.appendChild(transparencyTab);
 
-    const persistentTabs = [...baseHeaderItems, legacyContactTab, transparencyTab];
+    const exploreTab = createPersistentTab(
+      exploreRoute,
+      wrapperCopy.navigation.explore,
+      'data-gc-explore-tab',
+    );
+    const exploreAnchor = exploreTab.querySelector<HTMLAnchorElement>('a');
+    if (exploreAnchor) {
+      exploreAnchor.href = exploreRoute;
+      exploreAnchor.dataset.pass = 'true';
+      delete exploreAnchor.dataset.gcCardTarget;
+    }
+
+    const impactTab = menu.querySelector<HTMLElement>(
+      '._2680ad[data-pathname="/impact/"]',
+    );
+    impactTab?.classList.remove('_6ebb2e');
+    impactTab?.classList.add('_f722b9');
+    exploreTab.classList.remove('_f722b9', '_53e7d7');
+    exploreTab.classList.add('_6ebb2e');
+
+    menu.appendChild(legacyContactTab);
+    menu.appendChild(exploreTab);
+
+    const persistentTabs = [...baseHeaderItems, legacyContactTab, exploreTab];
     const activeIndex = persistentTabs.findIndex(
       (item) => item.dataset.pathname === window.location.pathname,
     );
@@ -229,8 +366,52 @@ export default function App() {
       item.querySelector('a')?.classList.toggle('_5a376b', activeIndex === index);
     });
 
+    let exploreNavigationPending = false;
+    const onPageShow = () => {
+      exploreNavigationPending = false;
+    };
+    window.addEventListener('pageshow', onPageShow);
+
+    const onExploreClick = (event: MouseEvent) => {
+      const target = event.target;
+      const clickedAnchor = target instanceof Element
+        ? target.closest<HTMLAnchorElement>(
+            '[data-gc-explore-tab] > a, a[data-gc-explore-link]',
+          )
+        : null;
+      if (!clickedAnchor) return;
+
+      if (
+        event.button !== 0 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      if (exploreNavigationPending) return;
+      exploreNavigationPending = true;
+
+      void (async () => {
+        clickedAnchor.setAttribute('aria-busy', 'true');
+        await waitForBrandbookWarmup();
+        window.location.assign(exploreRoute);
+      })();
+    };
+    // The legacy navigation runtime can rebuild its tab nodes after React has
+    // mounted. Delegation keeps the real Explore link wired even after that
+    // rebuild, instead of leaving a cloned anchor with no listener.
+    document.addEventListener('click', onExploreClick, true);
+
     return () => {
+      window.removeEventListener('pageshow', onPageShow);
+      document.removeEventListener('click', onExploreClick, true);
       legacyContactTab.remove();
+      exploreTab.remove();
       snapshots.forEach(({item, className, style, inHeader, anchorClassName}) => {
         item.className = className;
         if (style === null) item.removeAttribute('style');
@@ -240,71 +421,76 @@ export default function App() {
         const anchor = item.querySelector('a');
         if (anchor) anchor.className = anchorClassName;
       });
-      if (transparencySnapshot) {
+      if (transparencyTab && transparencySnapshot) {
         transparencyTab.className = transparencySnapshot.className;
         if (transparencySnapshot.style === null) transparencyTab.removeAttribute('style');
         else transparencyTab.setAttribute('style', transparencySnapshot.style);
         if (transparencySnapshot.inHeader === undefined) delete transparencyTab.dataset.inHeader;
         else transparencyTab.dataset.inHeader = transparencySnapshot.inHeader;
-        transparencyTab.removeAttribute('data-gc-transparency-tab');
         const anchor = transparencyTab.querySelector('a');
-        if (anchor) {
-          anchor.className = transparencySnapshot.anchorClassName;
-          if (transparencySnapshot.anchorAriaLabel === null) anchor.removeAttribute('aria-label');
-          else anchor.setAttribute('aria-label', transparencySnapshot.anchorAriaLabel);
-        }
-        const label = transparencyTab.querySelector('._fc3732');
-        if (label) label.textContent = transparencySnapshot.label;
-        menu.insertBefore(transparencyTab, transparencySnapshot.nextSibling);
-      } else {
-        transparencyTab.remove();
+        if (anchor) anchor.className = transparencySnapshot.anchorClassName;
       }
       delete menu.dataset.gcPersistentNavReady;
     };
   }, [wrapperCopy.navigation]);
 
   useEffect(() => {
+    if (!ENABLE_BRANDBOOK_TRANSITION) return;
+    if (useStandaloneBrandbook) return;
+
+    let releaseTimer: number | undefined;
+    const onStageReady = () => {
+      window.clearTimeout(releaseTimer);
+      // Lasa browserului un cadru de respiro pentru eliberarea bufferelor GLB
+      // inainte sa porneasca a doua scena WebGL din iframe.
+      releaseTimer = window.setTimeout(() => setSceneReady(true), 1200);
+    };
+    window.addEventListener('greencube:stage-ready', onStageReady);
+    if (window.__GREENTECH_STAGE_READY__) onStageReady();
+    return () => {
+      window.clearTimeout(releaseTimer);
+      window.removeEventListener('greencube:stage-ready', onStageReady);
+    };
+  }, [useStandaloneBrandbook]);
+
+  useEffect(() => {
     void mainContentReady
-      .then(() => new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve())))
-      .then(() => import('./greencube-runtime.js'));
+      .then(() => {
+        prepareHousePoiLayout();
+        return new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
+      })
+      .then(() => import('./greencube-runtime.js'))
+      .then(() => {
+        let requestedCard = '';
+        try {
+          requestedCard = window.sessionStorage.getItem('greentech:open-card') || '';
+          window.sessionStorage.removeItem('greentech:open-card');
+        } catch {
+          return;
+        }
+
+        if (!BUILDING_CARD_IDS.has(requestedCard)) return;
+        window.dispatchEvent(
+          new CustomEvent('greentech:card-request', {detail: {card: requestedCard}}),
+        );
+      });
   }, []);
 
   useEffect(() => {
-    const intro = document.querySelector<HTMLElement>('._b400e8');
-    if (!intro) return;
+    const headline = document.querySelector<HTMLElement>('._b400e8 ._c3bb59');
+    if (!headline) return;
 
-    let armed = false;
-    let revealTimer: number | undefined;
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (['ArrowDown', 'PageDown', ' ', 'Spacebar'].includes(event.key)) dismiss();
-    };
-
-    const dismiss = () => {
-      window.clearTimeout(revealTimer);
-      setShowScrollHint(false);
-      window.removeEventListener('wheel', dismiss);
-      window.removeEventListener('touchmove', dismiss);
-      window.removeEventListener('keydown', onKeyDown);
-    };
-
-    const revealWhenIntroCloses = () => {
-      if (armed || !intro.classList.contains('_289adb')) return;
-      armed = true;
-      window.addEventListener('wheel', dismiss, {passive: true});
-      window.addEventListener('touchmove', dismiss, {passive: true});
-      window.addEventListener('keydown', onKeyDown);
-      revealTimer = window.setTimeout(() => setShowScrollHint(true), 650);
-    };
-
-    const observer = new MutationObserver(revealWhenIntroCloses);
-    observer.observe(intro, {attributes: true, attributeFilter: ['class']});
-    revealWhenIntroCloses();
-
-    return () => {
+    const startWhenHeadlineAppears = () => {
+      if (!headline.classList.contains('_ea58ee')) return;
       observer.disconnect();
-      dismiss();
+      void startBrandbookWarmup();
     };
+
+    const observer = new MutationObserver(startWhenHeadlineAppears);
+    observer.observe(headline, {attributes: true, attributeFilter: ['class']});
+    startWhenHeadlineAppears();
+
+    return () => observer.disconnect();
   }, []);
 
   const setPhase = useCallback((phase: SectionPhase) => {
@@ -378,7 +564,23 @@ export default function App() {
     );
   }, [postToBrandbook, setPhase]);
 
+  const openStandaloneBrandbook = useCallback(() => {
+    if (!useStandaloneBrandbook || standaloneNavigationStarted.current) return;
+
+    standaloneNavigationStarted.current = true;
+
+    // The low-memory path owns the whole viewport, so Safari never has to keep
+    // the house renderer and the brandbook renderer alive in the same page.
+    // `replace` also prevents Safari from retaining the WebGL page in bfcache.
+    try {
+      (window.top ?? window).location.replace(STANDALONE_BRANDBOOK_URL);
+    } catch {
+      window.location.replace(STANDALONE_BRANDBOOK_URL);
+    }
+  }, [useStandaloneBrandbook]);
+
   useEffect(() => {
+    if (!ENABLE_BRANDBOOK_TRANSITION) return;
     const onProgress = (event: Event) => {
       const detail = (event as CustomEvent<GreencubeScrollProgress>).detail;
       const entry = clamp(Number(detail.entry) || 0);
@@ -388,8 +590,15 @@ export default function App() {
       const phase = sectionPhaseRef.current;
 
       if (phase === 'house') {
+        if (
+          useStandaloneBrandbook &&
+          entry >= ENTRY_SETTLED &&
+          entryTarget >= 0.999
+        ) {
+          openStandaloneBrandbook();
+          return;
+        }
         if (entry > ENTRY_EPSILON && brandbookReady.current) {
-          setShowScrollHint(false);
           setPhase('entering');
           postToBrandbook('activate-entry');
         }
@@ -411,7 +620,7 @@ export default function App() {
 
     window.addEventListener('greencube:scroll-progress', onProgress);
     return () => window.removeEventListener('greencube:scroll-progress', onProgress);
-  }, [postToBrandbook, renderPortal, setPhase]);
+  }, [openStandaloneBrandbook, postToBrandbook, renderPortal, setPhase, useStandaloneBrandbook]);
 
   useEffect(() => {
     const onAnchor = (event: Event) => {
@@ -475,34 +684,8 @@ export default function App() {
 
   return (
     <>
+      <BuildingCardRegistry />
       <style>{`
-        .greentech-scroll-hint {
-          position: fixed;
-          left: 50%;
-          bottom: calc(var(--column) + var(--space));
-          z-index: 40;
-          padding: .38em .9em .42em;
-          transform: translate(-50%, 12px);
-          border: 1px solid currentColor;
-          border-radius: 999px;
-          color: var(--forest);
-          background: rgba(239, 237, 224, .9);
-          font-family: Garamond, serif;
-          font-size: clamp(16px, 1.25vw, 22px);
-          line-height: 1;
-          letter-spacing: .04em;
-          white-space: nowrap;
-          pointer-events: none;
-          opacity: 0;
-          transition: opacity .35s linear, transform .5s var(--ease-out-expo);
-          backdrop-filter: blur(4px);
-        }
-
-        .greentech-scroll-hint.is-visible {
-          opacity: 1;
-          transform: translate(-50%, 0);
-        }
-
         .greentech-brandbook-section {
           position: fixed;
           inset: 0;
@@ -624,11 +807,6 @@ export default function App() {
         }
 
         @media (orientation: portrait) and (max-width: 1100px) {
-          .greentech-scroll-hint {
-            bottom: calc(var(--column) * 4 + var(--space) * 2);
-            font-size: 16px;
-          }
-
           [data-gc-legacy-contact] .gc-legacy-contact__row {
             grid-template-columns: minmax(0, 1fr);
             gap: .35rem;
@@ -640,28 +818,25 @@ export default function App() {
         }
       `}</style>
 
-      <div
-        className={`greentech-scroll-hint${showScrollHint && sectionPhase === 'house' ? ' is-visible' : ''}`}
-        aria-hidden={!showScrollHint || sectionPhase !== 'house'}
-      >
-        {wrapperCopy.scrollHint}
-      </div>
-
-      <section
-        ref={brandbookSectionElement}
-        className={`greentech-brandbook-section${sectionPresent ? ' is-present' : ''}${sectionInteractive ? ' is-interactive' : ''}`}
-        aria-label={wrapperCopy.brandbook.ariaLabel}
-        aria-hidden={!sectionInteractive}
-      >
-        <iframe
-          ref={brandbookFrameElement}
-          className="greentech-brandbook-frame"
-          src="/brandbook-section/?entry=connected"
-          title={wrapperCopy.brandbook.frameTitle}
-          loading="eager"
-          allow="fullscreen"
-        />
-      </section>
+      {ENABLE_BRANDBOOK_TRANSITION && (
+        <section
+          ref={brandbookSectionElement}
+          className={`greentech-brandbook-section${sectionPresent ? ' is-present' : ''}${sectionInteractive ? ' is-interactive' : ''}`}
+          aria-label={wrapperCopy.brandbook.ariaLabel}
+          aria-hidden={!sectionInteractive}
+        >
+          {!useStandaloneBrandbook && (
+            <iframe
+              ref={brandbookFrameElement}
+              className="greentech-brandbook-frame"
+              src={sceneReady ? '/brandbook-section/?entry=connected' : undefined}
+              title={wrapperCopy.brandbook.frameTitle}
+              loading="eager"
+              allow="fullscreen"
+            />
+          )}
+        </section>
+      )}
     </>
   );
 }

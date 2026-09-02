@@ -7,20 +7,28 @@
   const RETURN_SETTLED_Z = 440;
   const FINAL_SYNTHESIS_SCROLL_SCALE = 3.25;
   const FINAL_GLOBE_TO_FOOTER_DELAY = 1000;
-  const DIRECT_FOOTER = new URLSearchParams(window.location.search).get('entry') === 'footer';
+  const ENTRY_MODE = new URLSearchParams(window.location.search).get('entry');
+  const DIRECT_FOOTER = ENTRY_MODE === 'footer';
+  const STANDALONE_ENTRY = ENTRY_MODE === 'standalone' && parentWindow === window;
   let touchStartX = 0;
   let touchStartY = 0;
   let touchExitSent = false;
-  let activeRequested = false;
-  let interactionActive = false;
+  let activeRequested = STANDALONE_ENTRY;
+  let interactionActive = STANDALONE_ENTRY;
   let detailReady = false;
   let preparing = false;
   let outroTouchHandled = false;
   let outroStepLocked = false;
   let outroWheelNeedsRelease = false;
   let outroWheelReleaseTimer = 0;
+  let standaloneRevealQueued = false;
   let outroOpenGuardUntil = 0;
   let finalFooterTimer = 0;
+
+  function scheduleEntryPreparation(callback) {
+    if (document.prerendering) return window.setTimeout(callback, 16);
+    return window.requestAnimationFrame(callback);
+  }
 
   function armOutroWheelRelease() {
     outroWheelNeedsRelease = true;
@@ -166,6 +174,83 @@
     logo.isNearBtn = false;
     logo.isInfoNear = false;
     logo.enterFrame();
+
+    // enterFrame normally eases the legacy wordmark and secondary logo out.
+    // A standalone entry is already parked at the final stage-0 position, so
+    // exposing that tween creates a short flash before the intended artwork.
+    if (STANDALONE_ENTRY) {
+      [logo._logoJ, logo._logoI, logo._logoT, logo._logoTSP, logo._copy].forEach(function (mesh) {
+        if (!mesh || !mesh.material) return;
+        gsap.killTweensOf(mesh.material);
+        gsap.set(mesh.material, {opacity: 0});
+      });
+
+      if (logo._copy2?.material?.uniforms?.alpha) {
+        gsap.killTweensOf(logo._copy2.material.uniforms.alpha);
+        logo._copy2.material.uniforms.alpha.value = 0;
+      }
+
+      if (logo._oShader?.uniforms?.mixNum) {
+        gsap.killTweensOf(logo._oShader.uniforms.mixNum);
+        logo._oShader.uniforms.mixNum.value = 1;
+      }
+
+      const road = logo._road;
+      [road?._frontShader?.uniforms?.alpha, road?._backShader?.uniforms?.alpha].forEach(function (alpha) {
+        if (!alpha) return;
+        gsap.killTweensOf(alpha);
+        alpha.value = 1;
+      });
+      [road?._m1, road?._m2, road?._topM, road?._handM].forEach(function (material) {
+        if (!material) return;
+        gsap.killTweensOf(material);
+        material.opacity = 1;
+      });
+    }
+  }
+
+  function revealStandaloneEntry() {
+    if (!STANDALONE_ENTRY || standaloneRevealQueued) return;
+    standaloneRevealQueued = true;
+
+    const {world} = getParts();
+    const canvas = document.querySelector('#glworld canvas');
+    if (canvas) {
+      // glLoading.contentsStart() still runs even though its visual cover is
+      // disabled by the cream theme. Cancel the hidden loader's blur tween.
+      gsap.killTweensOf(canvas);
+      gsap.set(canvas, {filter: 'none'});
+    }
+
+    const renderEntryFrame = function () {
+      if (!world?._scene || !world?._cam || !world?._render) return;
+      world._scene.updateMatrixWorld(true);
+      world._cam.updateMatrixWorld(true);
+      world._render.render(world._scene, world._cam);
+    };
+
+    // Compile and commit the fully positioned road and characters while the
+    // cream gate is still covering both canvas and copy.
+    if (world?._scene && world?._cam && world?._render) {
+      if (typeof world._render.compile === 'function') {
+        world._render.compile(world._scene, world._cam);
+      }
+      renderEntryFrame();
+    }
+
+    scheduleEntryPreparation(function () {
+      // Repeat after the first GPU upload, then expose canvas and text together
+      // on the next paint. The two frames are synchronization, not a timer.
+      settleLogoAtEntry();
+      renderEntryFrame();
+      scheduleEntryPreparation(function () {
+        document.documentElement.classList.remove('bb-entry-pending');
+        document.documentElement.classList.add('bb-entry-ready');
+        document.documentElement.dataset.bbRuntimeReady = 'true';
+        window.__GREENTECH_BRANDBOOK_READY__ = true;
+        window.dispatchEvent(new CustomEvent('greentech:brandbook-ready'));
+      });
+    });
   }
 
   function finalizeEntry() {
@@ -183,6 +268,7 @@
     settleLogoAtEntry();
     detailReady = true;
     setPaused(!activeRequested);
+    revealStandaloneEntry();
     postEntryAnchor('stage0-detail-ready');
   }
 
@@ -196,7 +282,7 @@
       !stage._root?.visible ||
       runtime._scroll?._target !== stage
     ) {
-      window.requestAnimationFrame(prepareEntry);
+      scheduleEntryPreparation(prepareEntry);
       return;
     }
 
@@ -212,7 +298,11 @@
     placeLogoAtEntry(stage._logo);
     settleLogoAtEntry();
 
-    window.setTimeout(finalizeEntry, 1250);
+    // The connected handoff still needs its original settling window. A direct
+    // standalone navigation has no preceding circle/iframe transition, so an
+    // extra 1.25 s here only leaves the visitor looking at the cream gate.
+    if (STANDALONE_ENTRY) finalizeEntry();
+    else window.setTimeout(finalizeEntry, 1250);
   }
 
   function isAtEntry() {
@@ -231,6 +321,12 @@
     event?.preventDefault();
     event?.stopImmediatePropagation();
     interactionActive = false;
+    if (STANDALONE_ENTRY) {
+      // The house document was intentionally replaced to release its WebGL
+      // memory. Recreate it only when the visitor scrolls back from step 1.
+      window.location.replace('/?scene=low');
+      return true;
+    }
     post('return-to-house');
     return true;
   }
@@ -516,6 +612,11 @@
     }
 
     if (DIRECT_FOOTER) return;
+
+    // On constrained/mobile devices this document replaces the house page
+    // instead of living in an iframe. Keep its sole renderer running and make
+    // the prepared 1/7 entry interactive without waiting for parent messages.
+    if (STANDALONE_ENTRY) setPaused(false);
 
     prepareEntry();
     enforceEntryFloor();

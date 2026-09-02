@@ -1,199 +1,254 @@
 (function () {
   'use strict';
 
-  var IMAGE_ROOT = '../brandbook-section/assets/image/';
-
-  var PROJECT_SCHEMAS = {
-    'camin-eficient': {
-      index: 1,
-      gallery: [
-        {copyKey: 'hero', src: 'ring1.webp'},
-        {copyKey: 'context', src: 'stage6/earth.webp'},
-        {copyKey: 'detail', src: 'ring211.webp'}
-      ]
-    },
-    'energie-cu-sens': {
-      index: 2,
-      gallery: [
-        {copyKey: 'hero', src: 'ring2.webp'},
-        {copyKey: 'context', src: 'stage6/earth.webp'},
-        {copyKey: 'detail', src: 'stage2/rightBack.webp'}
-      ]
-    },
-    'spatii-vii': {
-      index: 3,
-      gallery: [
-        {copyKey: 'hero', src: 'stage6/earth.webp'},
-        {copyKey: 'context', src: 'ring1.webp'},
-        {copyKey: 'detail', src: 'stage1/center_back.webp'}
-      ]
-    },
-    'reteaua-care-construieste': {
-      index: 4,
-      gallery: [
-        {copyKey: 'hero', src: 'ring3.webp'},
-        {copyKey: 'context', src: 'stage4/center1.webp'},
-        {copyKey: 'detail', src: 'stage3/center.webp'}
-      ]
-    }
+  var DATA_URL = './proiecte.json';
+  var state = {
+    data: null,
+    activeCase: null,
+    activeCarouselIndex: 0,
+    lastFocused: null,
+    scrollFrame: 0
   };
 
-  function formatCopy(template, values) {
-    return String(template || '').replace(/\{([a-z]+)\}/gi, function (match, key) {
-      return Object.prototype.hasOwnProperty.call(values, key) ? String(values[key]) : match;
+  function one(selector, root) {
+    return (root || document).querySelector(selector);
+  }
+
+  function all(selector, root) {
+    return Array.from((root || document).querySelectorAll(selector));
+  }
+
+  function setText(selector, value, root) {
+    var node = one(selector, root);
+    if (node) node.textContent = value || '';
+    return node;
+  }
+
+  function setImage(imageNode, image) {
+    if (!imageNode || !image) return;
+    var imageFrame = imageNode.closest('figure, .case-card__media');
+    imageFrame?.classList.remove('is-image-error');
+    imageNode.src = image.src || '';
+    imageNode.alt = image.alt || '';
+    imageNode.addEventListener('load', function () {
+      imageFrame?.classList.remove('is-image-error');
+    }, {once: true});
+    imageNode.addEventListener('error', function () {
+      imageFrame?.classList.add('is-image-error');
+    }, {once: true});
+  }
+
+  function formatIndex(value) {
+    return String(value + 1).padStart(2, '0');
+  }
+
+  function createFact(item, className) {
+    var wrapper = document.createElement('div');
+    if (className) wrapper.className = className;
+    var value = document.createElement('strong');
+    var label = document.createElement('span');
+    value.textContent = item.value || '';
+    label.textContent = item.label || '';
+    wrapper.append(value, label);
+    return wrapper;
+  }
+
+  function renderHero(data) {
+    var meta = one('[data-hero-meta]');
+    meta.replaceChildren();
+    (data.meta || []).forEach(function (item) {
+      var span = document.createElement('span');
+      span.textContent = item;
+      meta.appendChild(span);
+    });
+
+    setText('[data-hero-title]', data.title);
+    setText('[data-hero-lead]', data.lead);
+    setText('[data-hero-caption]', data.image.caption);
+    setImage(one('[data-hero-image]'), data.image);
+  }
+
+  function renderStory(data) {
+    setText('[data-story-label]', data.label);
+    setText('[data-story-title]', data.title);
+
+    var intro = one('[data-story-intro]');
+    intro.replaceChildren();
+    (data.intro || []).forEach(function (paragraph) {
+      var node = document.createElement('p');
+      node.textContent = paragraph;
+      intro.appendChild(node);
+    });
+
+    var feature = data.feature;
+    setText('[data-feature-eyebrow]', feature.eyebrow);
+    setText('[data-feature-title]', feature.title);
+    setText('[data-feature-description]', feature.description);
+    setText('[data-feature-credit]', feature.image.credit);
+    setImage(one('[data-feature-image]'), feature.image);
+
+    var facts = one('[data-feature-facts]');
+    facts.replaceChildren();
+    (feature.facts || []).forEach(function (fact) {
+      var row = document.createElement('div');
+      var label = document.createElement('dt');
+      var value = document.createElement('dd');
+      label.textContent = fact.label;
+      value.textContent = fact.value;
+      row.append(label, value);
+      facts.appendChild(row);
     });
   }
 
-  function initialise() {
-    var content = window.GREENTECH_CHARITY_CONTENT || {};
-    var pageCopy = content.projects || {};
-    var runtimeCopy = pageCopy.runtime || {};
-    var itemCopy = pageCopy.items || {};
-    var projects = {};
-
-    Object.keys(PROJECT_SCHEMAS).forEach(function (slug) {
-      var schema = PROJECT_SCHEMAS[slug];
-      var copy = itemCopy[slug] || {};
-      var galleryCopy = copy.gallery || {};
-      projects[slug] = {
-        index: schema.index,
-        category: copy.category || '',
-        title: copy.title || '',
-        summary: copy.drawerSummary || '',
-        description: copy.detailDescription || '',
-        tags: Array.isArray(copy.tags) ? copy.tags : [],
-        process: Array.isArray(copy.process) ? copy.process : [],
-        impact: Array.isArray(copy.impact) ? copy.impact : [],
-        gallery: schema.gallery.map(function (image) {
-          var imageCopy = galleryCopy[image.copyKey] || {};
-          return {src: image.src, alt: imageCopy.alt || '', caption: imageCopy.caption || ''};
-        })
-      };
-    });
-    var projectTotal = String(Object.keys(PROJECT_SCHEMAS).length).padStart(2, '0');
-
-  var dialog = document.querySelector('[data-project-dialog]');
-  var dialogScroll = dialog && dialog.querySelector('.project-drawer__scroll');
-  var mainImage = dialog && dialog.querySelector('[data-drawer-image]');
-  var galleryTimer = null;
-  var lastFocusedElement = null;
-  var activeSlug = null;
-
-  function setText(selector, value) {
-    var element = dialog.querySelector(selector);
-    if (element) element.textContent = value;
-  }
-
-  function actionUrl(action, slug) {
-    var url = new URL('/', window.location.origin);
-    url.searchParams.set('action', action);
-    if (slug) url.searchParams.set('project', slug);
-    return url.pathname + url.search;
-  }
-
-  function renderList(container, values) {
+  function renderImpact(data) {
+    setText('[data-impact-label]', data.label);
+    setText('[data-impact-title]', data.title);
+    var container = one('[data-impact-facts]');
     container.replaceChildren();
-    values.forEach(function (value) {
+    (data.facts || []).forEach(function (fact) {
+      var node = createFact(fact, 'impact-fact reveal');
+      container.appendChild(node);
+    });
+  }
+
+  function renderField(data) {
+    setText('[data-field-label]', data.label);
+    setText('[data-field-title]', data.title);
+    var gallery = one('[data-field-gallery]');
+    gallery.replaceChildren();
+
+    (data.gallery || []).forEach(function (item) {
+      var card = document.createElement('figure');
+      var media = document.createElement('div');
+      var image = document.createElement('img');
+      var credit = document.createElement('span');
+      var caption = document.createElement('figcaption');
+      var copy = document.createElement('span');
+
+      card.className = 'field-card reveal';
+      media.className = 'field-card__media';
+      image.width = 1500;
+      image.height = 1200;
+      image.loading = 'lazy';
+      copy.textContent = item.caption || '';
+      credit.className = 'field-card__credit';
+      credit.textContent = item.credit || '';
+      setImage(image, item);
+      media.appendChild(image);
+      caption.append(copy, credit);
+      card.append(media, caption);
+      gallery.appendChild(card);
+    });
+  }
+
+  function createCaseCard(project) {
+    var card = document.createElement('button');
+    var media = document.createElement('span');
+    var image = document.createElement('img');
+    var status = document.createElement('span');
+    var content = document.createElement('span');
+    var meta = document.createElement('span');
+    var title = document.createElement('h3');
+
+    card.type = 'button';
+    card.className = 'case-card';
+    card.dataset.caseSlug = project.slug;
+    card.setAttribute('aria-label', 'Deschide proiectul ' + project.title);
+
+    media.className = 'case-card__media';
+    image.width = 1500;
+    image.height = 1500;
+    image.loading = 'lazy';
+    setImage(image, project.image);
+
+    status.className = 'case-card__status';
+    status.textContent = project.status;
+    media.append(image, status);
+
+    content.className = 'case-card__content';
+    meta.className = 'case-card__meta';
+    meta.textContent = project.category + ' · ' + project.location;
+    title.textContent = project.title;
+    content.append(meta, title);
+    card.append(media, content);
+    card.addEventListener('click', function () {
+      openCase(project.slug, true);
+    });
+    return card;
+  }
+
+  function renderCases(data) {
+    setText('[data-cases-label]', data.label);
+    setText('[data-cases-title]', data.title);
+    setText('[data-cases-intro]', data.intro);
+    var track = one('[data-cases-track]');
+    track.replaceChildren();
+    (data.items || []).forEach(function (project) {
+      track.appendChild(createCaseCard(project));
+    });
+    updateCarouselState(0);
+  }
+
+  function renderClosing(data) {
+    setText('[data-closing-label]', data.label);
+    setText('[data-closing-title]', data.title);
+    setText('[data-closing-primary]', data.primary);
+  }
+
+  function renderPage(data) {
+    state.data = data;
+    document.title = data.page?.title || document.title;
+    var description = document.querySelector('meta[name="description"]');
+    if (description && data.page?.description) description.content = data.page.description;
+
+    renderHero(data.hero || {});
+    renderStory(data.story || {});
+    renderImpact(data.impact || {});
+    renderField(data.field || {});
+    renderCases(data.cases || {});
+    renderClosing(data.closing || {});
+    setupReveals();
+    syncCaseFromUrl();
+  }
+
+  function getProjects() {
+    return state.data?.cases?.items || [];
+  }
+
+  function findProject(slug) {
+    return getProjects().find(function (project) {
+      return project.slug === slug;
+    });
+  }
+
+  function renderList(container, items) {
+    container.replaceChildren();
+    (items || []).forEach(function (value) {
       var item = document.createElement('li');
       item.textContent = value;
       container.appendChild(item);
     });
   }
 
-  function selectGalleryImage(project, imageIndex, moveFocus) {
-    var image = project.gallery[imageIndex];
-    var buttons = Array.from(dialog.querySelectorAll('.gallery-button'));
+  function renderCaseDialog(project) {
+    var dialog = one('[data-case-dialog]');
+    setText('[data-case-dialog-meta]', project.category + ' · ' + project.location + ' · ' + project.status, dialog);
+    setText('[data-case-dialog-title]', project.title, dialog);
+    setText('[data-case-dialog-summary]', project.summary, dialog);
+    setText('[data-case-dialog-credit]', project.image.credit, dialog);
+    setImage(one('[data-case-dialog-image]', dialog), project.image);
 
-    buttons.forEach(function (button, index) {
-      button.setAttribute('aria-pressed', String(index === imageIndex));
+    var stats = one('[data-case-dialog-stats]', dialog);
+    stats.replaceChildren();
+    (project.stats || []).forEach(function (fact) {
+      stats.appendChild(createFact(fact, 'case-dialog-stat'));
     });
 
-    if (galleryTimer) window.clearTimeout(galleryTimer);
-    mainImage.classList.add('is-changing');
-
-    galleryTimer = window.setTimeout(function () {
-      mainImage.src = IMAGE_ROOT + image.src;
-      mainImage.alt = image.alt;
-      setText('[data-drawer-caption]', image.caption);
-      mainImage.classList.remove('is-changing');
-    }, 160);
-
-    if (moveFocus && buttons[imageIndex]) buttons[imageIndex].focus();
-  }
-
-  function renderGallery(project) {
-    var gallery = dialog.querySelector('[data-drawer-gallery]');
-    gallery.replaceChildren();
-
-    project.gallery.forEach(function (image, index) {
-      var button = document.createElement('button');
-      var thumbnail = document.createElement('img');
-
-      button.type = 'button';
-      button.className = 'gallery-button';
-      button.setAttribute('aria-label', formatCopy(runtimeCopy.galleryButtonAria, {
-        index: index + 1,
-        title: project.title
-      }));
-      button.setAttribute('aria-pressed', String(index === 0));
-      button.dataset.galleryIndex = String(index);
-
-      thumbnail.src = IMAGE_ROOT + image.src;
-      thumbnail.alt = '';
-      thumbnail.width = 2400;
-      thumbnail.height = 2400;
-      thumbnail.loading = 'lazy';
-
-      button.appendChild(thumbnail);
-      button.addEventListener('click', function () {
-        selectGalleryImage(project, index, false);
-      });
-      gallery.appendChild(button);
-    });
-  }
-
-    function renderProject(slug) {
-      var project = projects[slug];
-      if (!project || !dialog) {
-        var unavailableAnnouncer = document.querySelector('[data-project-announcer]');
-        if (unavailableAnnouncer) unavailableAnnouncer.textContent = runtimeCopy.projectUnavailable || '';
-        return false;
-      }
-
-      activeSlug = slug;
-      setText('[data-drawer-position]', formatCopy(runtimeCopy.drawerPosition, {
-        current: String(project.index).padStart(2, '0'),
-        total: projectTotal
-      }));
-    setText('[data-drawer-category]', project.category);
-    setText('[data-drawer-title]', project.title);
-    setText('[data-drawer-summary]', project.summary);
-    setText('[data-drawer-description]', project.description);
-    setText('[data-drawer-caption]', project.gallery[0].caption);
-
-    var tags = dialog.querySelector('[data-drawer-tags]');
-    tags.replaceChildren();
-    project.tags.forEach(function (tag) {
-      var item = document.createElement('span');
-      item.textContent = tag;
-      tags.appendChild(item);
-    });
-
-    renderList(dialog.querySelector('[data-drawer-process]'), project.process);
-    renderList(dialog.querySelector('[data-drawer-impact]'), project.impact);
-    renderGallery(project);
-
-    mainImage.classList.remove('is-changing');
-    mainImage.src = IMAGE_ROOT + project.gallery[0].src;
-    mainImage.alt = project.gallery[0].alt;
-
-    var donateAction = dialog.querySelector('[data-drawer-donate]');
-    var contactAction = dialog.querySelector('[data-drawer-contact]');
-    donateAction.href = actionUrl('donate', slug);
-    donateAction.dataset.bbProject = slug;
-    contactAction.href = '/contact/';
-      document.title = formatCopy(runtimeCopy.projectDocumentTitle, {title: project.title});
-    return true;
+    renderList(one('[data-case-dialog-needs]', dialog), project.needs);
+    renderList(one('[data-case-dialog-steps]', dialog), project.steps);
+    var action = one('[data-case-dialog-action]', dialog);
+    action.dataset.bbProject = project.slug;
+    action.dataset.bbProjectLabel = project.title;
   }
 
   function projectUrl(slug) {
@@ -203,169 +258,208 @@
     return url.pathname + url.search;
   }
 
-  function openProject(slug, options) {
-    options = options || {};
-    if (!renderProject(slug)) return;
-
-    if (options.updateHistory) {
-      window.history.pushState({greentechProjectDrawer: true, project: slug}, '', projectUrl(slug));
-    }
-
-    if (!dialog.open) {
-      lastFocusedElement = document.activeElement;
-      dialog.showModal();
-      document.body.classList.add('has-dialog');
-    }
-
-    if (dialogScroll) dialogScroll.scrollTop = 0;
-    window.requestAnimationFrame(function () {
-      var closeButton = dialog.querySelector('[data-close-dialog]');
-      if (closeButton) closeButton.focus({preventScroll: true});
-    });
-
-    var announcer = document.querySelector('[data-project-announcer]');
-      if (announcer) announcer.textContent = formatCopy(runtimeCopy.openedAnnouncement, {
-        title: projects[slug].title
-      });
+  function baseUrl() {
+    return window.location.pathname;
   }
 
-  function closeProject(options) {
-    options = options || {};
-    if (!dialog || !dialog.open) return;
+  function openCase(slug, updateHistory) {
+    var project = findProject(slug);
+    var dialog = one('[data-case-dialog]');
+    if (!project || !dialog) return;
 
-    if (options.updateHistory) {
-      var currentUrl = new URL(window.location.href);
-      if (window.history.state && window.history.state.greentechProjectDrawer) {
-        window.history.back();
-        return;
-      }
-      currentUrl.searchParams.delete('proiect');
-      window.history.replaceState(window.history.state, '', currentUrl.pathname + currentUrl.search + currentUrl.hash);
-    }
+    renderCaseDialog(project);
+    state.activeCase = slug;
+    state.lastFocused = document.activeElement;
+    if (updateHistory) window.history.pushState({greentechCase: slug}, '', projectUrl(slug));
+
+    if (!dialog.open) dialog.showModal();
+    document.body.classList.add('has-case-dialog');
+    one('[data-case-close]', dialog)?.focus({preventScroll: true});
+    setText('[data-project-announcer]', 'Proiect deschis: ' + project.title);
+  }
+
+  function closeCase(updateHistory) {
+    var dialog = one('[data-case-dialog]');
+    if (!dialog?.open) return;
 
     dialog.close();
-    document.body.classList.remove('has-dialog');
-    activeSlug = null;
-      document.title = runtimeCopy.baseDocumentTitle || pageCopy.page?.title || '';
+    document.body.classList.remove('has-case-dialog');
+    state.activeCase = null;
 
-    if (lastFocusedElement && document.contains(lastFocusedElement)) {
-      lastFocusedElement.focus({preventScroll: true});
+    if (updateHistory) {
+      if (window.history.state?.greentechCase) window.history.back();
+      else window.history.replaceState(window.history.state, '', baseUrl());
+    }
+
+    if (state.lastFocused && document.contains(state.lastFocused)) {
+      state.lastFocused.focus({preventScroll: true});
     }
   }
 
-  function syncDialogWithUrl() {
+  function syncCaseFromUrl() {
     var slug = new URL(window.location.href).searchParams.get('proiect');
-    if (slug && projects[slug]) {
-      if (!dialog.open || activeSlug !== slug) openProject(slug, {updateHistory: false});
-    } else {
-      closeProject({updateHistory: false});
+    var dialog = one('[data-case-dialog]');
+    if (slug && findProject(slug)) {
+      if (!dialog.open || state.activeCase !== slug) openCase(slug, false);
+    } else if (dialog?.open) {
+      closeCase(false);
     }
   }
 
-  function trapFocus(event) {
-    if (event.key !== 'Tab' || !dialog.open) return;
+  function getCarouselTarget(index) {
+    var viewport = one('[data-carousel-viewport]');
+    var cards = all('.case-card');
+    var card = cards[index];
+    if (!viewport || !card) return 0;
+    var centered = card.offsetLeft - (viewport.clientWidth - card.offsetWidth) / 2;
+    var maxScroll = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
+    return Math.max(0, Math.min(centered, maxScroll));
+  }
 
-    var focusable = Array.from(dialog.querySelectorAll(
-      'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-    )).filter(function (element) {
-      return element.offsetParent !== null;
+  function updateCarouselState(forcedIndex) {
+    var viewport = one('[data-carousel-viewport]');
+    var cards = all('.case-card');
+    if (!viewport || !cards.length) return;
+    var maxScroll = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
+    var isAtStart = viewport.scrollLeft <= 2;
+    var isAtEnd = maxScroll > 0 && viewport.scrollLeft >= maxScroll - 2;
+    var viewportCenter = viewport.scrollLeft + viewport.clientWidth / 2;
+    var closestIndex = cards.reduce(function (bestIndex, card, cardIndex) {
+      var best = cards[bestIndex];
+      var bestDistance = Math.abs(best.offsetLeft + best.offsetWidth / 2 - viewportCenter);
+      var distance = Math.abs(card.offsetLeft + card.offsetWidth / 2 - viewportCenter);
+      return distance < bestDistance ? cardIndex : bestIndex;
+    }, 0);
+    var index = typeof forcedIndex === 'number'
+      ? forcedIndex
+      : isAtStart
+        ? 0
+        : isAtEnd
+          ? cards.length - 1
+          : closestIndex;
+    index = Math.max(0, Math.min(cards.length - 1, index));
+    state.activeCarouselIndex = index;
+    setText('[data-carousel-position]', formatIndex(index) + ' / ' + String(cards.length).padStart(2, '0'));
+    one('[data-carousel-prev]').disabled = index <= 0;
+    one('[data-carousel-next]').disabled = index >= cards.length - 1;
+  }
+
+  function moveCarousel(direction) {
+    var viewport = one('[data-carousel-viewport]');
+    if (!viewport) return;
+    var nextIndex = Math.max(0, Math.min(getProjects().length - 1, state.activeCarouselIndex + direction));
+    var targetLeft = getCarouselTarget(nextIndex);
+    viewport.scrollTo({
+      left: targetLeft,
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
     });
-
-    if (!focusable.length) {
-      event.preventDefault();
-      return;
-    }
-
-    var first = focusable[0];
-    var last = focusable[focusable.length - 1];
-    if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault();
-      first.focus();
-    }
+    updateCarouselState(nextIndex);
   }
 
-  function setupFilters() {
-    var buttons = Array.from(document.querySelectorAll('[data-filter]'));
-    var cards = Array.from(document.querySelectorAll('[data-project-card]'));
-    var result = document.querySelector('[data-filter-result]');
-
-    buttons.forEach(function (button) {
-      button.addEventListener('click', function () {
-        var filter = button.dataset.filter;
-        var visibleCount = 0;
-
-        buttons.forEach(function (item) {
-          var active = item === button;
-          item.classList.toggle('is-active', active);
-          item.setAttribute('aria-pressed', String(active));
-        });
-
-        cards.forEach(function (card) {
-          var visible = filter === 'toate' || card.dataset.category === filter;
-          card.hidden = !visible;
-          if (visible) visibleCount += 1;
-        });
-
-          var resultTemplates = runtimeCopy.filterResult || {};
-          var template = visibleCount === 0 ? resultTemplates.none :
-            visibleCount === 1 ? resultTemplates.one : resultTemplates.other;
-          result.textContent = formatCopy(template, {count: visibleCount});
+  function setupCarousel() {
+    var viewport = one('[data-carousel-viewport]');
+    one('[data-carousel-prev]')?.addEventListener('click', function () { moveCarousel(-1); });
+    one('[data-carousel-next]')?.addEventListener('click', function () { moveCarousel(1); });
+    viewport?.addEventListener('scroll', function () {
+      if (state.scrollFrame) return;
+      state.scrollFrame = window.requestAnimationFrame(function () {
+        state.scrollFrame = 0;
+        updateCarouselState();
       });
+    }, {passive: true});
+    viewport?.addEventListener('keydown', function (event) {
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        moveCarousel(-1);
+      } else if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        moveCarousel(1);
+      }
     });
+    window.addEventListener('resize', function () { updateCarouselState(); }, {passive: true});
   }
 
   function setupHeader() {
-    var header = document.querySelector('[data-site-header]');
+    var header = one('[data-site-header]');
+    var back = one('[data-back-link]');
     if (!header) return;
 
-    function update() {
-      header.classList.toggle('is-scrolled', window.scrollY > 18);
+    function updateHeader() {
+      header.classList.toggle('is-scrolled', window.scrollY > 20);
     }
 
-    update();
-    window.addEventListener('scroll', update, {passive: true});
+    back?.addEventListener('click', function (event) {
+      if (window.history.length <= 1 || !document.referrer) return;
+      try {
+        if (new URL(document.referrer).origin !== window.location.origin) return;
+        event.preventDefault();
+        window.history.back();
+      } catch {
+        // Linkul catre pagina principala ramane fallback-ul sigur.
+      }
+    });
+    window.addEventListener('scroll', updateHeader, {passive: true});
+    updateHeader();
   }
 
-  document.addEventListener('click', function (event) {
-    var openButton = event.target.closest('[data-open-project]');
-    if (openButton) {
-      openProject(openButton.dataset.openProject, {updateHistory: true});
+  function setupDialog() {
+    var dialog = one('[data-case-dialog]');
+    if (!dialog) return;
+
+    one('[data-case-close]', dialog)?.addEventListener('click', function () {
+      closeCase(true);
+    });
+    dialog.addEventListener('cancel', function (event) {
+      event.preventDefault();
+      closeCase(true);
+    });
+    dialog.addEventListener('click', function (event) {
+      if (event.target === dialog) closeCase(true);
+    });
+    dialog.addEventListener('click', function (event) {
+      if (!event.target.closest('[data-bb-modal-open]')) return;
+      closeCase(false);
+      window.history.replaceState(window.history.state, '', baseUrl());
+    });
+    window.addEventListener('popstate', syncCaseFromUrl);
+  }
+
+  function setupReveals() {
+    var nodes = all('.reveal:not([data-reveal-ready])');
+    nodes.forEach(function (node) { node.dataset.revealReady = 'true'; });
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !('IntersectionObserver' in window)) {
+      nodes.forEach(function (node) { node.classList.add('is-visible'); });
       return;
     }
 
-    if (event.target.closest('[data-close-dialog]')) {
-      closeProject({updateHistory: true});
-    }
-  });
-
-  if (dialog) {
-    dialog.addEventListener('cancel', function (event) {
-      event.preventDefault();
-      closeProject({updateHistory: true});
-    });
-
-    dialog.addEventListener('click', function (event) {
-      if (event.target !== dialog) return;
-      var bounds = dialog.getBoundingClientRect();
-      var clickedInside = event.clientX >= bounds.left && event.clientX <= bounds.right &&
-        event.clientY >= bounds.top && event.clientY <= bounds.bottom;
-      if (!clickedInside) closeProject({updateHistory: true});
-    });
-
-    dialog.addEventListener('keydown', trapFocus);
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add('is-visible');
+        observer.unobserve(entry.target);
+      });
+    }, {rootMargin: '0px 0px -8% 0px', threshold: 0.08});
+    nodes.forEach(function (node) { observer.observe(node); });
   }
 
-  window.addEventListener('popstate', syncDialogWithUrl);
-  setupFilters();
+  function showLoadError() {
+    setText('[data-hero-title]', 'Proiectele noastre se pregatesc.');
+    setText('[data-hero-lead]', 'Nu am putut incarca momentan continutul. Reincarca pagina sau scrie-ne la help@greentechcharity.ro.');
+    all('.reveal').forEach(function (node) { node.classList.add('is-visible'); });
+  }
+
   setupHeader();
-  syncDialogWithUrl();
+  setupCarousel();
+  setupDialog();
 
-  }
-
-  var ready = window.GreentechCharityContentReady;
-  if (ready && typeof ready.then === 'function') ready.then(initialise, initialise);
-  else initialise();
+  fetch(DATA_URL, {headers: {'Accept': 'application/json'}})
+    .then(function (response) {
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+      return response.json();
+    })
+    .then(renderPage)
+    .catch(function (error) {
+      console.error('[GREENTECH proiecte] Continutul JSON nu a putut fi incarcat.', error);
+      showLoadError();
+    });
 })();
