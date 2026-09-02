@@ -73,8 +73,10 @@
 
   function installImmediateStandaloneRoad() {
     const standalone =
-      window.parent === window &&
-      new URLSearchParams(window.location.search).get('entry') === 'standalone';
+      window.parent === window && (
+        window.__GREENTECH_STANDALONE_ENTRY__ === true ||
+        new URLSearchParams(window.location.search).get('entry') === 'standalone'
+      );
     const roadPrototype = window.gl0Road && window.gl0Road.prototype;
     if (!standalone || !roadPrototype || roadPrototype.__greentechImmediateEntry) return;
 

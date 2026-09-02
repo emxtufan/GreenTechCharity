@@ -10,6 +10,19 @@
   const ENTRY_MODE = new URLSearchParams(window.location.search).get('entry');
   const DIRECT_FOOTER = ENTRY_MODE === 'footer';
   const STANDALONE_ENTRY = ENTRY_MODE === 'standalone' && parentWindow === window;
+  const PUBLIC_ENTRY_URL = '/';
+
+  if (STANDALONE_ENTRY) {
+    window.__GREENTECH_STANDALONE_ENTRY__ = true;
+    // Mask the implementation URL before the heavy visual runtime starts.
+    // The document <base> keeps every relative brandbook asset anchored to its
+    // original folder even after the visible address becomes `/`.
+    window.history.replaceState(
+      Object.assign({}, window.history.state || {}, {greentechBrandbookEntry: true}),
+      '',
+      PUBLIC_ENTRY_URL,
+    );
+  }
   let touchStartX = 0;
   let touchStartY = 0;
   let touchExitSent = false;
@@ -324,7 +337,7 @@
     if (STANDALONE_ENTRY) {
       // The house document was intentionally replaced to release its WebGL
       // memory. Recreate it only when the visitor scrolls back from step 1.
-      window.location.replace('/?scene=low');
+      window.location.replace(PUBLIC_ENTRY_URL);
       return true;
     }
     post('return-to-house');

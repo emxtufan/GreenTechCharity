@@ -6,7 +6,7 @@ import path from 'path';
 import {defineConfig, loadEnv, type Plugin} from 'vite';
 
 const SCENE_RUNTIME_PATCH_VERSION =
-  'ground-grass-v2-solar-inline-card-system-camera-owner-v1';
+  'ground-grass-v2-solar-inline-card-system-camera-owner-v1-local-runtime-v1';
 
 function originalPages(): Plugin {
   return {
@@ -247,6 +247,29 @@ function originalSceneAssets(modelUrl: string, workerVersion: string): Plugin {
           throw new Error('Nu am gasit proprietatea legacy PreviewManager.');
         }
         transformed = transformed.replace(legacyPreviewProperty, '');
+
+        // Continutul si navigarea sunt locale, deci Vercel Analytics nu mai
+        // trebuie sa injecteze /_vercel/insights/script.js la fiecare accesare.
+        const legacyAnalyticsBootstrap = 'async init(){rm(),this.resize(),';
+        if (!transformed.includes(legacyAnalyticsBootstrap)) {
+          throw new Error('Nu am gasit bootstrap-ul legacy Vercel Analytics.');
+        }
+        transformed = transformed.replace(
+          legacyAnalyticsBootstrap,
+          'async init(){this.resize(),',
+        );
+
+        // CTA-ul era afisat dupa 2.75s de delay-uri fixe. Il facem vizibil
+        // imediat dupa primul cadru al intro-ului, cand listenerul de click este
+        // deja instalat, fara sa modificam restul secventei cinematice.
+        const delayedIntroCta =
+          'async show(){this.claim.classList.add(Ot.Hidden),await qt(250),this.claim.classList.remove(Ot.Hidden),this.claim.classList.add(Ot.Visible),await qt(1500),this.claim.classList.add(Ot.Translate),await qt(500),this.title.classList.add(Ot.Visible),await qt(500),this.button.classList.add(Ot.Visible),await qt(500),this.lang.classList.add(Ot.Visible)}';
+        const earlyIntroCta =
+          'async show(){this.claim.classList.add(Ot.Hidden),await qt(250),this.claim.classList.remove(Ot.Hidden),this.claim.classList.add(Ot.Visible),this.button.classList.add(Ot.Visible),await qt(1500),this.claim.classList.add(Ot.Translate),await qt(500),this.title.classList.add(Ot.Visible),await qt(500),this.lang.classList.add(Ot.Visible)}';
+        if (!transformed.includes(delayedIntroCta)) {
+          throw new Error('Nu am gasit secventa intarziata a CTA-ului introductiv.');
+        }
+        transformed = transformed.replace(delayedIntroCta, earlyIntroCta);
 
         const legacyLogoNavigation = 'this.logo.addEventListener("click",()=>{window.open("/","_self")})';
         const inlineLogoNavigation =

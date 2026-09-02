@@ -215,7 +215,7 @@ const contactCard: BuildingCardDefinition = {
               </div>
               <div class="gc-legacy-contact__row">
                 <span data-gc-content="mainSite.pages.contact.websiteLabel"></span>
-                <a href="https://greentechpro.ro/" target="_blank" rel="noreferrer" data-pass="true" data-gc-content="mainSite.pages.contact.website"></a>
+                <a href="https://greentechcharity.ro/" target="_blank" rel="noreferrer" data-pass="true" data-gc-content="mainSite.pages.contact.website"></a>
               </div>
             </address>
           </div>

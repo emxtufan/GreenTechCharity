@@ -8,7 +8,7 @@
     "title": "O casa schimba mai mult decat o adresa.",
     "lead": "Urmarim drumul fiecarei familii de la nevoie la siguranta: ascultam, proiectam, construim si ramanem aproape.",
     "image": {
-      "src": "https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&w=2000&q=84",
+      "src": "/proiecte/assets/images/hero-child.jpg",
       "alt": "Copil zambind intr-un moment luminos, imagine editoriala despre speranta",
       "caption": "In centrul fiecarui proiect se afla viata care va continua in acel camin."
     }
@@ -25,7 +25,7 @@
       "title": "Casa 01 — un inceput stabil pentru o familie cu doi copii",
       "description": "Proiectam o locuinta compacta, luminoasa si eficienta energetic. Solutia combina o anvelopa bine izolata, energie regenerabila si o curte care ramane usor de intretinut.",
       "image": {
-        "src": "https://images.unsplash.com/photo-1609220136736-443140cffec6?auto=format&fit=crop&w=1800&q=84",
+        "src": "/proiecte/assets/images/family-home.jpg",
         "alt": "Familie petrecand timp impreuna acasa"
       },
       "facts": [
@@ -50,17 +50,17 @@
     "title": "Detaliile mici fac diferenta dintre o cladire si un camin.",
     "gallery": [
       {
-        "src": "https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=1500&q=82",
+        "src": "/proiecte/assets/images/construction-team.jpg",
         "alt": "Echipa de constructori lucrand pe santier",
         "caption": "Expertiza tehnica transforma intentia buna intr-o constructie sigura."
       },
       {
-        "src": "https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?auto=format&fit=crop&w=1400&q=82",
+        "src": "/proiecte/assets/images/solar-panels-green.jpg",
         "alt": "Panouri solare intr-un peisaj verde",
         "caption": "Energia curata reduce presiunea costurilor de zi cu zi."
       },
       {
-        "src": "https://images.unsplash.com/photo-1469571486292-0ba58a3f068b?auto=format&fit=crop&w=1400&q=82",
+        "src": "/proiecte/assets/images/volunteers-community.jpg",
         "alt": "Voluntari impreuna intr-o actiune comunitara",
         "caption": "Un proiect rezista atunci cand comunitatea ramane aproape."
       }
@@ -81,7 +81,7 @@
         "title": "Casa 01 — loc pentru un nou inceput",
         "summary": "O locuinta compacta pentru o familie cu doi copii, gandita pentru siguranta, costuri mici si multa lumina naturala.",
         "image": {
-          "src": "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1500&q=84",
+          "src": "/proiecte/assets/images/house-prahova.jpg",
           "alt": "Casa contemporana luminoasa inconjurata de vegetatie"
         },
         "stats": [{"value": "86 mp", "label": "suprafata"}, {"value": "4", "label": "beneficiari"}, {"value": "34%", "label": "progres"}],
@@ -98,7 +98,7 @@
         "title": "Renovare 02 — caldura pastrata inauntru",
         "summary": "Reabilitam o casa existenta pentru a elimina umezeala, a imbunatati izolatia si a reduce consumul familiei.",
         "image": {
-          "src": "https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=1500&q=84",
+          "src": "/proiecte/assets/images/renovation-ilfov.jpg",
           "alt": "Persoana lucrand cu atentie la renovarea unui interior"
         },
         "stats": [{"value": "72 mp", "label": "suprafata"}, {"value": "3", "label": "beneficiari"}, {"value": "18%", "label": "progres"}],
@@ -115,7 +115,7 @@
         "title": "Energie 03 — facturi mai mici, confort mai mare",
         "summary": "Completam renovarea unei locuinte cu panouri fotovoltaice si un sistem eficient de producere a apei calde.",
         "image": {
-          "src": "https://images.unsplash.com/photo-1509391366360-2e959784a276?auto=format&fit=crop&w=1500&q=84",
+          "src": "/proiecte/assets/images/solar-dambovita.jpg",
           "alt": "Panouri fotovoltaice montate pe acoperisul unei case"
         },
         "stats": [{"value": "4.8 kW", "label": "putere tinta"}, {"value": "5", "label": "beneficiari"}, {"value": "46%", "label": "progres"}],
@@ -132,7 +132,7 @@
         "title": "Gradina 04 — un loc sigur pentru joaca",
         "summary": "Transformam curtea comuna intr-un spatiu verde, accesibil si usor de ingrijit de familii si voluntari.",
         "image": {
-          "src": "https://images.unsplash.com/photo-1472162072942-cd5147eb3902?auto=format&fit=crop&w=1500&q=84",
+          "src": "/proiecte/assets/images/garden-brasov.jpg",
           "alt": "Copii petrecand timp impreuna in aer liber"
         },
         "stats": [{"value": "420 mp", "label": "spatiu verde"}, {"value": "11", "label": "copii"}, {"value": "12%", "label": "progres"}],
