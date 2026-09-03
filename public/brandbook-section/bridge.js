@@ -35,6 +35,10 @@
   let outroWheelNeedsRelease = false;
   let outroWheelReleaseTimer = 0;
   let standaloneRevealQueued = false;
+  let connectedPaintQueued = false;
+  let activeRequestId = 0;
+  let activationAnnounced = false;
+  let watchedCanvas = null;
   let outroOpenGuardUntil = 0;
   let finalFooterTimer = 0;
 
@@ -154,9 +158,10 @@
     };
   }
 
-  function postEntryAnchor(type) {
+  function postEntryAnchor(type, payload) {
     const ring = getRingMetrics();
-    if (ring) post(type || 'entry-anchor', {ring});
+    if (ring) post(type || 'entry-anchor', Object.assign({ring}, payload || {}));
+    else if (type) post(type, payload);
   }
 
   function enforceEntryFloor() {
@@ -222,11 +227,94 @@
     }
   }
 
+  function renderEntryFrame(compile) {
+    const {world} = getParts();
+    if (!world?._scene || !world?._cam || !world?._render) return false;
+    const renderer = world._render;
+    const canvas = renderer.domElement;
+    const context = typeof renderer.getContext === 'function' ? renderer.getContext() : null;
+    if (!canvas || canvas.width <= 0 || canvas.height <= 0 || context?.isContextLost?.()) {
+      return false;
+    }
+
+    if (watchedCanvas !== canvas) {
+      watchedCanvas = canvas;
+      canvas.addEventListener('webglcontextlost', function (event) {
+        event.preventDefault();
+        post('webgl-context-lost', {
+          requestId: activeRequestId,
+          reason: 'webgl-context-lost',
+        });
+      });
+    }
+
+    try {
+      const previousFrame = Number(renderer.info?.render?.frame ?? -1);
+      world._scene.updateMatrixWorld(true);
+      world._cam.updateMatrixWorld(true);
+      if (compile && typeof renderer.compile === 'function') {
+        renderer.compile(world._scene, world._cam);
+      }
+      renderer.render(world._scene, world._cam);
+      context?.flush?.();
+      const currentFrame = Number(renderer.info?.render?.frame ?? previousFrame + 1);
+      return currentFrame > previousFrame && !context?.isContextLost?.();
+    } catch (error) {
+      console.error('[GREENTECH Charity] Primul cadru Brandbook nu a putut fi randat.', error);
+      return false;
+    }
+  }
+
+  function announceConnectedEntryPaint() {
+    if (STANDALONE_ENTRY || !detailReady || connectedPaintQueued) return;
+    connectedPaintQueued = true;
+
+    // Pornim rendererul in timp ce iframe-ul este inca ascuns. Parintele va
+    // face schimbul de scene abia dupa doua cadre valide la pozitia finala.
+    setPaused(false);
+    settleLogoAtEntry();
+    let attempts = 0;
+    let successfulFrames = 0;
+
+    const paint = function () {
+      attempts += 1;
+      settleLogoAtEntry();
+      successfulFrames = renderEntryFrame(attempts === 1) ? successfulFrames + 1 : 0;
+
+      if (successfulFrames >= 2) {
+        connectedPaintQueued = false;
+        postEntryAnchor('entry-painted', {requestId: activeRequestId});
+
+        // Texturile etapelor urmatoare pornesc numai dupa ce primul cadru a
+        // fost predat parintelui, ca upload-ul lor sa nu blocheze deschiderea.
+        if (!activationAnnounced) {
+          activationAnnounced = true;
+          scheduleEntryPreparation(function () {
+            window.dispatchEvent(new CustomEvent('greentech:brandbook-activated'));
+          });
+        }
+        return;
+      }
+
+      if (attempts < 8) {
+        scheduleEntryPreparation(paint);
+        return;
+      }
+
+      connectedPaintQueued = false;
+      post('entry-failed', {
+        requestId: activeRequestId,
+        reason: 'first-frame-not-rendered',
+      });
+    };
+
+    paint();
+  }
+
   function revealStandaloneEntry() {
     if (!STANDALONE_ENTRY || standaloneRevealQueued) return;
     standaloneRevealQueued = true;
 
-    const {world} = getParts();
     const canvas = document.querySelector('#glworld canvas');
     if (canvas) {
       // glLoading.contentsStart() still runs even though its visual cover is
@@ -235,28 +323,17 @@
       gsap.set(canvas, {filter: 'none'});
     }
 
-    const renderEntryFrame = function () {
-      if (!world?._scene || !world?._cam || !world?._render) return;
-      world._scene.updateMatrixWorld(true);
-      world._cam.updateMatrixWorld(true);
-      world._render.render(world._scene, world._cam);
-    };
-
     // Compile and commit the fully positioned road and characters while the
     // cream gate is still covering both canvas and copy.
-    if (world?._scene && world?._cam && world?._render) {
-      if (typeof world._render.compile === 'function') {
-        world._render.compile(world._scene, world._cam);
-      }
-      renderEntryFrame();
-    }
+    renderEntryFrame(true);
 
     scheduleEntryPreparation(function () {
       // Repeat after the first GPU upload, then expose canvas and text together
       // on the next paint. The two frames are synchronization, not a timer.
       settleLogoAtEntry();
-      renderEntryFrame();
+      renderEntryFrame(false);
       scheduleEntryPreparation(function () {
+        renderEntryFrame(false);
         document.documentElement.classList.remove('bb-entry-pending');
         document.documentElement.classList.add('bb-entry-ready');
         document.documentElement.dataset.bbRuntimeReady = 'true';
@@ -280,6 +357,7 @@
     placeLogoAtEntry(stage._logo);
     settleLogoAtEntry();
     detailReady = true;
+    renderEntryFrame(true);
     setPaused(!activeRequested);
     revealStandaloneEntry();
     postEntryAnchor('stage0-detail-ready');
@@ -311,11 +389,9 @@
     placeLogoAtEntry(stage._logo);
     settleLogoAtEntry();
 
-    // The connected handoff still needs its original settling window. A direct
-    // standalone navigation has no preceding circle/iframe transition, so an
-    // extra 1.25 s here only leaves the visitor looking at the cream gate.
-    if (STANDALONE_ENTRY) finalizeEntry();
-    else window.setTimeout(finalizeEntry, 1250);
+    // Matricele si primul cadru sunt validate explicit in finalize/render;
+    // intarzierea fixa nu mai este necesara si penaliza inutil conexiunile lente.
+    finalizeEntry();
   }
 
   function isAtEntry() {
@@ -560,9 +636,11 @@
         if (detailReady) postEntryAnchor();
         break;
       case 'entry-active':
+        activeRequestId = Number(event.data.requestId) || 0;
         activeRequested = true;
         interactionActive = true;
         setPaused(false);
+        announceConnectedEntryPaint();
         break;
       case 'entry-leaving':
         interactionActive = false;

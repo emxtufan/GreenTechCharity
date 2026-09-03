@@ -1,11 +1,15 @@
 const SCENE_CONTAINER_SELECTOR = '._64c0f3';
 const SCENE_PROGRESS_SELECTOR = '._388974';
 const INTRO_CTA_SELECTOR = '._34fe16';
+const INTRO_CTA_CONTENT_SELECTOR = '._2bb0cd';
 
 const ZOOM_STARTED_AT = 0.001;
 const HOUSE_SETTLED_AT = 0.997;
 const HOUSE_LEFT_AT = 0.965;
 const CAMERA_SETTLE_DELAY_MS = 700;
+const SCENE_LOAD_STALL_TIMEOUT_MS = 120_000;
+const SCENE_FAILURE_CONFIRM_DELAY_MS = 3_000;
+const SCENE_VISIBLE_CONFIRM_DELAY_MS = 8_000;
 const ORBIT_PERIOD_SECONDS = 47;
 const DESKTOP_ORBIT_AMPLITUDE = 0.68;
 const MOBILE_ORBIT_AMPLITUDE = 0.56;
@@ -18,7 +22,12 @@ type CameraOwner = 'auto' | 'user';
 type CameraChannelWindow = Window & {
   __GREENTECH_CAMERA_ORBIT_ACTIVE__?: boolean;
   __GREENTECH_CAMERA_ORBIT_X__?: number;
+  __GREENTECH_EARLY_START_REQUESTED__?: boolean;
+  __GREENTECH_STAGE_READY__?: boolean;
+  __GREENTECH_STAGE_VISIBLE__?: boolean;
 };
+
+type StageProgressEvent = CustomEvent<{progress?: number}>;
 
 type InlineScrollStyles = {
   htmlOverflow: string;
@@ -58,6 +67,9 @@ export const installHouseCameraExperience = () => {
   const cameraChannel = window as CameraChannelWindow;
   let phase: CameraPhase = 'idle';
   let journeyStarted = false;
+  let journeyRequested = false;
+  let stageReady = cameraChannel.__GREENTECH_STAGE_READY__ === true;
+  let stageVisible = cameraChannel.__GREENTECH_STAGE_VISIBLE__ === true;
   let scrollLocked = false;
   let settleStartedAt = 0;
   let orbitStartedAt = 0;
@@ -77,8 +89,135 @@ export const installHouseCameraExperience = () => {
   let savedStyles: InlineScrollStyles | null = null;
   let sceneContainer: HTMLElement | null = null;
   let sceneProgressLayer: HTMLElement | null = null;
+  let introCta: HTMLButtonElement | null = null;
+  let introCtaContent: HTMLElement | null = null;
+  let loadingStatus: HTMLSpanElement | null = null;
+  let loadingPercent: HTMLElement | null = null;
+  let loadingBar: HTMLElement | null = null;
+  let sceneLoadProgress = 0;
+  let sceneLoadFailed = false;
+  let workerFailureSuspected = false;
+  let sceneLoadTimeout = 0;
+  let sceneFailureTimeout = 0;
   let sceneTravel = 0;
   let sceneRect: DOMRect | null = null;
+
+  const getIntroCta = () => {
+    introCta = document.querySelector<HTMLButtonElement>(INTRO_CTA_SELECTOR);
+    introCtaContent = introCta?.querySelector<HTMLElement>(INTRO_CTA_CONTENT_SELECTOR) ?? null;
+    return introCta;
+  };
+
+  const ensureLoadingStatus = () => {
+    const button = introCta ?? getIntroCta();
+    if (!button) return null;
+    if (loadingStatus?.isConnected) return loadingStatus;
+
+    loadingStatus = document.createElement('span');
+    loadingStatus.className = 'gc-scene-loading-status';
+    loadingStatus.setAttribute('aria-live', 'polite');
+    loadingStatus.innerHTML =
+      '<span class="gc-scene-loading-copy">Incarcam scena <strong class="gc-scene-loading-percent">0%</strong></span>' +
+      '<span class="gc-scene-loading-track" aria-hidden="true"><span class="gc-scene-loading-bar"></span></span>';
+    (introCtaContent ?? button).appendChild(loadingStatus);
+    loadingPercent = loadingStatus.querySelector<HTMLElement>('.gc-scene-loading-percent');
+    loadingBar = loadingStatus.querySelector<HTMLElement>('.gc-scene-loading-bar');
+    return loadingStatus;
+  };
+
+  const clearLoadWatchdog = () => {
+    window.clearTimeout(sceneLoadTimeout);
+    sceneLoadTimeout = 0;
+  };
+
+  const clearFailureConfirmation = () => {
+    window.clearTimeout(sceneFailureTimeout);
+    sceneFailureTimeout = 0;
+  };
+
+  const scheduleFailureConfirmation = (delay = SCENE_FAILURE_CONFIRM_DELAY_MS) => {
+    if (stageVisible || sceneFailureTimeout) return;
+    sceneFailureTimeout = window.setTimeout(() => {
+      sceneFailureTimeout = 0;
+      showLoadFailure();
+    }, delay);
+  };
+
+  const armLoadWatchdog = () => {
+    clearLoadWatchdog();
+    if (!journeyRequested || stageVisible) return;
+    sceneLoadTimeout = window.setTimeout(() => {
+      sceneLoadTimeout = 0;
+      if (!journeyRequested || stageVisible || sceneLoadFailed) return;
+      const status = ensureLoadingStatus();
+      const copy = status?.querySelector<HTMLElement>('.gc-scene-loading-copy');
+      if (copy) {
+        copy.innerHTML =
+          `Incarcarea continua <strong class="gc-scene-loading-percent">${Math.round(sceneLoadProgress * 100)}%</strong>`;
+        loadingPercent = copy.querySelector<HTMLElement>('.gc-scene-loading-percent');
+      }
+      // Un timeout de retea nu mai este considerat verdict de eroare. Workerul
+      // poate descarca sau compila in continuare pe un telefon lent.
+    }, SCENE_LOAD_STALL_TIMEOUT_MS);
+  };
+
+  const updateLoadingProgress = (progress: number) => {
+    const nextProgress = clamp(progress > 1 ? progress / 100 : progress, 0, 1);
+    sceneLoadProgress = Math.max(sceneLoadProgress, nextProgress);
+    const percent = Math.round(sceneLoadProgress * 100);
+    if (loadingPercent) loadingPercent.textContent = `${percent}%`;
+    loadingBar?.style.setProperty('--gc-scene-load', `${percent}%`);
+  };
+
+  const showLoadingState = () => {
+    const button = introCta ?? getIntroCta();
+    if (!button || sceneLoadFailed) return;
+    const status = ensureLoadingStatus();
+    if (!status) return;
+
+    button.classList.add('gc-scene-loading');
+    button.classList.remove('gc-scene-load-failed');
+    button.setAttribute('aria-busy', 'true');
+    button.setAttribute('aria-label', `Incarcam scena, ${Math.round(sceneLoadProgress * 100)}%`);
+    if (introCtaContent) introCtaContent.setAttribute('aria-hidden', 'true');
+    updateLoadingProgress(sceneLoadProgress);
+  };
+
+  const clearLoadingState = () => {
+    const button = introCta ?? getIntroCta();
+    button?.classList.remove('gc-scene-loading', 'gc-scene-load-failed');
+    button?.removeAttribute('aria-busy');
+    button?.removeAttribute('aria-label');
+    introCtaContent?.removeAttribute('aria-hidden');
+    loadingStatus?.remove();
+    loadingStatus = null;
+    loadingPercent = null;
+    loadingBar = null;
+    clearLoadWatchdog();
+  };
+
+  const showLoadFailure = () => {
+    if (stageVisible) return;
+    sceneLoadFailed = true;
+    clearLoadWatchdog();
+
+    // Nu inlocuim preventiv CTA-ul daca vizitatorul nu a cerut inca scena.
+    // Un semnal tranzitoriu poate fi urmat de progress/ready si va fi anulat.
+    if (!journeyRequested) return;
+
+    const button = introCta ?? getIntroCta();
+    const status = ensureLoadingStatus();
+    if (!button || !status) return;
+    button.classList.remove('gc-scene-loading');
+    button.classList.add('gc-scene-load-failed');
+    button.removeAttribute('aria-busy');
+    button.setAttribute('aria-label', 'Scena nu a pornit. Reincearca incarcarea.');
+    if (introCtaContent) introCtaContent.setAttribute('aria-hidden', 'true');
+    status.innerHTML =
+      '<span class="gc-scene-loading-copy">Scena nu a pornit <strong>Reincearca</strong></span>';
+    loadingPercent = null;
+    loadingBar = null;
+  };
 
   const refreshSceneMetrics = () => {
     sceneContainer = document.querySelector<HTMLElement>(SCENE_CONTAINER_SELECTOR);
@@ -334,10 +473,11 @@ export const installHouseCameraExperience = () => {
     frame = window.requestAnimationFrame(update);
   };
 
-  const startJourney = () => {
+  const beginJourney = () => {
     if (journeyStarted) return;
     refreshSceneMetrics();
     journeyStarted = true;
+    journeyRequested = false;
     initialZoomComplete = false;
     settleStartedAt = 0;
     orbitStartedAt = 0;
@@ -351,9 +491,99 @@ export const installHouseCameraExperience = () => {
     setPhase('clouds');
   };
 
+  const startJourney = () => {
+    if (journeyStarted) return;
+    if (sceneLoadFailed) {
+      if (!journeyRequested) {
+        journeyRequested = true;
+        document.documentElement.dataset.gcJourneyPending = 'true';
+        showLoadFailure();
+        return;
+      }
+      window.location.reload();
+      return;
+    }
+    if (journeyRequested) return;
+    showLoadingState();
+    // Canal explicit catre runtime: daca activarea are loc foarte devreme,
+    // intentia nu depinde exclusiv de listenerul legacy al butonului.
+    window.dispatchEvent(new CustomEvent('greentech:scene-start-requested'));
+    journeyRequested = true;
+    document.documentElement.dataset.gcJourneyPending = 'true';
+    armLoadWatchdog();
+    if (stageReady && workerFailureSuspected) {
+      scheduleFailureConfirmation(SCENE_VISIBLE_CONFIRM_DELAY_MS);
+    }
+    if (stageVisible) beginJourney();
+  };
+
+  const onStageReady = () => {
+    stageReady = true;
+    workerFailureSuspected = false;
+    clearFailureConfirmation();
+    if (sceneLoadFailed) {
+      sceneLoadFailed = false;
+      clearLoadingState();
+    }
+    updateLoadingProgress(0.98);
+    if (journeyRequested) {
+      showLoadingState();
+      armLoadWatchdog();
+      window.dispatchEvent(new CustomEvent('greentech:scene-start-requested'));
+    }
+  };
+
+  const onStageVisible = () => {
+    stageReady = true;
+    stageVisible = true;
+    sceneLoadFailed = false;
+    workerFailureSuspected = false;
+    clearFailureConfirmation();
+    updateLoadingProgress(1);
+    clearLoadingState();
+    delete document.documentElement.dataset.gcJourneyPending;
+    if (journeyRequested) beginJourney();
+  };
+
+  const onStageProgress = (event: Event) => {
+    const progress = (event as StageProgressEvent).detail?.progress;
+    if (!Number.isFinite(progress)) return;
+    workerFailureSuspected = false;
+    clearFailureConfirmation();
+    if (sceneLoadFailed) {
+      sceneLoadFailed = false;
+      clearLoadingState();
+    }
+    // Ultimele procente reprezinta compilarea si primele cadre, nu doar
+    // descarcarea resurselor. Astfel butonul nu ramane inselator la 100%.
+    updateLoadingProgress((progress as number) * 0.95);
+    armLoadWatchdog();
+    if (journeyRequested) showLoadingState();
+  };
+
+  const onStageFailed = () => {
+    if (stageVisible || sceneFailureTimeout) return;
+    if (stageReady && !journeyRequested) {
+      // Dupa `ready`, un error generic nu dovedeste ca modelul s-a pierdut.
+      // Il verificam abia cand utilizatorul cere primul cadru vizibil.
+      workerFailureSuspected = true;
+      return;
+    }
+    // `error` si `messageerror` nu sunt verdicte suficiente singure. Acordam
+    // workerului o fereastra scurta; orice progress/ready anuleaza eroarea.
+    scheduleFailureConfirmation();
+  };
+
   const onDocumentClick = (event: MouseEvent) => {
     const target = event.target;
-    if (target instanceof Element && target.closest(INTRO_CTA_SELECTOR)) startJourney();
+    if (target instanceof Element && target.closest(INTRO_CTA_SELECTOR)) {
+      if (!stageVisible) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      }
+      cameraChannel.__GREENTECH_EARLY_START_REQUESTED__ = false;
+      startJourney();
+    }
   };
   const onVisibilityChange = () => {
     if (!document.hidden && phase === 'orbiting' && cameraOwner === 'auto') {
@@ -363,6 +593,18 @@ export const installHouseCameraExperience = () => {
   setPhase('idle');
   setCameraOwner('auto');
   document.addEventListener('click', onDocumentClick, {capture: true});
+  window.addEventListener('greencube:stage-ready', onStageReady);
+  window.addEventListener('greencube:stage-visible', onStageVisible);
+  window.addEventListener('greencube:stage-progress', onStageProgress);
+  window.addEventListener('greencube:stage-failed', onStageFailed);
+
+  // Butonul exista deja in HTML-ul initial. Pe o conexiune foarte lenta el
+  // poate fi apasat inainte ca bundle-ul React si adaptorul camerei sa fie
+  // evaluate. Scriptul inline din index.html pastreaza acea intentie aici.
+  if (cameraChannel.__GREENTECH_EARLY_START_REQUESTED__) {
+    cameraChannel.__GREENTECH_EARLY_START_REQUESTED__ = false;
+    startJourney();
+  }
 
   window.addEventListener('wheel', blockInput, {capture: true, passive: false});
   window.addEventListener('touchstart', onTouchStart, {capture: true, passive: false});
@@ -385,6 +627,10 @@ export const installHouseCameraExperience = () => {
     window.cancelAnimationFrame(frame);
     unlockScroll();
     document.removeEventListener('click', onDocumentClick, {capture: true});
+    window.removeEventListener('greencube:stage-ready', onStageReady);
+    window.removeEventListener('greencube:stage-visible', onStageVisible);
+    window.removeEventListener('greencube:stage-progress', onStageProgress);
+    window.removeEventListener('greencube:stage-failed', onStageFailed);
     window.removeEventListener('wheel', blockInput, {capture: true});
     window.removeEventListener('touchstart', onTouchStart, {capture: true});
     window.removeEventListener('touchmove', onTouchMove, {capture: true});
@@ -402,7 +648,12 @@ export const installHouseCameraExperience = () => {
     setOrbitChannel(false);
     delete cameraChannel.__GREENTECH_CAMERA_ORBIT_ACTIVE__;
     delete cameraChannel.__GREENTECH_CAMERA_ORBIT_X__;
+    delete cameraChannel.__GREENTECH_EARLY_START_REQUESTED__;
     delete document.documentElement.dataset.gcCameraPhase;
     delete document.documentElement.dataset.gcCameraOwner;
+    delete document.documentElement.dataset.gcJourneyPending;
+    clearLoadingState();
+    clearLoadWatchdog();
+    clearFailureConfirmation();
   };
 };

@@ -1112,6 +1112,81 @@ button {
     transform: none
 }
 
+._34fe16.gc-scene-loading,
+._34fe16.gc-scene-load-failed {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+    cursor: wait
+}
+
+._34fe16.gc-scene-load-failed {
+    cursor: pointer
+}
+
+._34fe16.gc-scene-loading>._2bb0cd,
+._34fe16.gc-scene-load-failed>._2bb0cd {
+    color: var(--forest);
+    background-color: var(--lemon)
+}
+
+._34fe16.gc-scene-loading>._2bb0cd>._14690a,
+._34fe16.gc-scene-loading>._2bb0cd>._5862ff,
+._34fe16.gc-scene-load-failed>._2bb0cd>._14690a,
+._34fe16.gc-scene-load-failed>._2bb0cd>._5862ff {
+    opacity: 0;
+    visibility: hidden
+}
+
+.gc-scene-loading-status {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(.45rem, 1vw, .9rem);
+    box-sizing: border-box;
+    padding: calc(var(--column)/8);
+    border-radius: inherit;
+    background-color: var(--lemon);
+    color: var(--forest);
+    font-family: Helvetica, sans-serif;
+    font-size: clamp(.72rem, 2.8vw, var(--text-s));
+    line-height: 1;
+    white-space: nowrap;
+    pointer-events: none
+}
+
+.gc-scene-loading-copy {
+    display: flex;
+    align-items: center;
+    gap: .38em
+}
+
+.gc-scene-loading-copy strong {
+    font-variant-numeric: tabular-nums;
+    font-weight: 700
+}
+
+.gc-scene-loading-track {
+    display: block;
+    flex: 1 1 auto;
+    inline-size: clamp(3rem, 18vw, 8rem);
+    max-inline-size: 8rem;
+    block-size: 2px;
+    overflow: hidden;
+    background-color: rgba(31, 58, 39, .24)
+}
+
+.gc-scene-loading-bar {
+    display: block;
+    inline-size: var(--gc-scene-load, 0%);
+    block-size: 100%;
+    background-color: currentColor;
+    transition: inline-size .18s linear
+}
+
 ._5ddc80 {
     color: var(--lemon);
     opacity: 0;
@@ -1164,6 +1239,15 @@ button {
         height: calc(100% - 2*var(--space));
         width: var(--column);
         transform: translate(100%)
+    }
+
+    .gc-scene-loading-status {
+        gap: clamp(.5rem, 1.4vh, 1rem);
+        font-size: clamp(.68rem, 1.6vh, var(--text-s))
+    }
+
+    .gc-scene-loading-track {
+        inline-size: clamp(3rem, 16vh, 8rem)
     }
 }
 

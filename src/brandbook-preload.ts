@@ -4,6 +4,9 @@ const BRANDBOOK_BASE_URL = '/brandbook-section/';
 const BRANDBOOK_RUNTIME_URL = '/brandbook-section/assets/js/glmain.min.js';
 const SPECULATION_RULES_ID = 'gc-brandbook-prerender';
 const DOCUMENT_PREFETCH_ID = 'gc-brandbook-document-prefetch';
+const MAX_CRITICAL_FETCH_ATTEMPTS = 2;
+const CRITICAL_FETCH_TIMEOUT_MS = 15_000;
+const ENTRY_IMAGE_TIMEOUT_MS = 15_000;
 
 // These are the images needed by the first real 1/7 frame. They are retained
 // after Image.decode() so non-prerendering browsers can reuse the decoded
@@ -12,6 +15,9 @@ const ENTRY_IMAGE_PATHS = [
   'assets/image/bg.webp',
   'assets/image/bgNoise.webp',
   'assets/image/bgMask.webp',
+  'assets/image/stage_mask.webp',
+  'assets/image/stage_mask_blue.webp',
+  'assets/image/stage_mask_black.webp',
   'assets/image/stage0/s0_o.webp',
   'assets/image/stage0/s0_t_ro.png',
   'assets/image/stage0/s0_t_sp_ro.png',
@@ -47,7 +53,16 @@ type ScriptConstructorWithSupports = typeof HTMLScriptElement & {
 type NavigatorWithConnection = Navigator & {
   connection?: {
     saveData?: boolean;
+    effectiveType?: string;
+    downlink?: number;
+    rtt?: number;
   };
+};
+
+type NetworkProfile = {
+  slow: boolean;
+  priority: FetchPriority;
+  concurrency: number;
 };
 
 type WarmupDetail = {
@@ -70,7 +85,28 @@ const supportsManagedPrerender = () => {
   return constructor.supports?.('speculationrules') === true;
 };
 
-const installManagedPrerender = () => {
+const getNetworkProfile = (): NetworkProfile => {
+  const connection = (navigator as NavigatorWithConnection).connection;
+  const effectiveType = connection?.effectiveType?.toLowerCase();
+  const downlink = Number(connection?.downlink);
+  const rtt = Number(connection?.rtt);
+  const slow = Boolean(
+    connection?.saveData ||
+    effectiveType === 'slow-2g' ||
+    effectiveType === '2g' ||
+    effectiveType === '3g' ||
+    (Number.isFinite(downlink) && downlink > 0 && downlink <= 1.5) ||
+    (Number.isFinite(rtt) && rtt >= 300),
+  );
+
+  return {
+    slow,
+    priority: slow ? 'low' : 'high',
+    concurrency: slow ? 1 : 5,
+  };
+};
+
+const installManagedPrerender = (slowNetwork: boolean) => {
   if (!document.getElementById(DOCUMENT_PREFETCH_ID)) {
     const prefetch = document.createElement('link');
     prefetch.id = DOCUMENT_PREFETCH_ID;
@@ -79,7 +115,14 @@ const installManagedPrerender = () => {
     document.head.appendChild(prefetch);
   }
 
-  if (!supportsManagedPrerender() || document.getElementById(SPECULATION_RULES_ID)) return;
+  // Prerender-ul ar porni un al doilea document WebGL in paralel cu scena
+  // casei. Pe o conexiune lenta pastram doar prefetch-ul documentului, astfel
+  // incat resursele critice sa nu concureze pentru aceeasi banda.
+  if (
+    slowNetwork ||
+    !supportsManagedPrerender() ||
+    document.getElementById(SPECULATION_RULES_ID)
+  ) return;
 
   const rules = document.createElement('script');
   rules.id = SPECULATION_RULES_ID;
@@ -106,24 +149,56 @@ const toAbsoluteUrl = (value: string, base: string) => {
   }
 };
 
-const fetchResource = async (url: string, priority: FetchPriority = 'low') => {
-  const response = await fetch(url, {
-    cache: 'force-cache',
-    credentials: 'same-origin',
-    priority,
-  } as PriorityRequestInit);
-  if (!response.ok) throw new Error(`Preload ${response.status}: ${url}`);
-  await response.arrayBuffer();
+const fetchWithRetry = async <T>(
+  url: string,
+  priority: FetchPriority,
+  attempts: number,
+  label: string,
+  read: (response: Response) => Promise<T>,
+) => {
+  const maximumAttempts = Math.max(1, Math.min(attempts, MAX_CRITICAL_FETCH_ATTEMPTS));
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= maximumAttempts; attempt += 1) {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), CRITICAL_FETCH_TIMEOUT_MS);
+
+    try {
+      const response = await fetch(url, {
+        cache: 'force-cache',
+        credentials: 'same-origin',
+        priority,
+        signal: controller.signal,
+      } as PriorityRequestInit);
+      if (!response.ok) throw new Error(`${label} ${response.status}: ${url}`);
+      return await read(response);
+    } catch (error) {
+      lastError = error;
+    } finally {
+      window.clearTimeout(timeout);
+    }
+  }
+
+  const reason = lastError instanceof Error ? ` ${lastError.message}` : '';
+  throw new Error(`${label} esuat dupa ${maximumAttempts} incercari: ${url}.${reason}`);
 };
 
-const fetchText = async (url: string) => {
-  const response = await fetch(url, {
-    cache: 'force-cache',
-    credentials: 'same-origin',
-    priority: 'high',
-  } as PriorityRequestInit);
-  if (!response.ok) throw new Error(`Manifest ${response.status}: ${url}`);
-  return response.text();
+const fetchResource = async (
+  url: string,
+  priority: FetchPriority = 'low',
+  attempts = 1,
+) => {
+  await fetchWithRetry(url, priority, attempts, 'Preload', (response) => response.arrayBuffer());
+};
+
+const fetchText = async (url: string, priority: FetchPriority = 'high') => {
+  return fetchWithRetry(
+    url,
+    priority,
+    MAX_CRITICAL_FETCH_ATTEMPTS,
+    'Manifest',
+    (response) => response.text(),
+  );
 };
 
 const extractCssUrls = (css: string, stylesheetUrl: string) => {
@@ -138,7 +213,7 @@ const extractCssUrls = (css: string, stylesheetUrl: string) => {
   return urls;
 };
 
-const buildManifest = () => {
+const buildManifest = (priority: FetchPriority) => {
   if (manifestPromise) return manifestPromise;
 
   manifestPromise = (async () => {
@@ -146,8 +221,8 @@ const buildManifest = () => {
     const baseUrl = new URL(BRANDBOOK_BASE_URL, window.location.href).href;
     const runtimeUrl = new URL(BRANDBOOK_RUNTIME_URL, window.location.href).href;
     const [html, runtime] = await Promise.all([
-      fetchText(targetUrl),
-      fetchText(runtimeUrl),
+      fetchText(targetUrl, priority),
+      fetchText(runtimeUrl, priority),
     ]);
 
     const urls = new Set<string>([targetUrl, runtimeUrl]);
@@ -160,8 +235,7 @@ const buildManifest = () => {
       if (resolved) urls.add(resolved);
     });
 
-    urls.add(new URL('content.json', baseUrl).href);
-    urls.add(new URL('cream-theme.css', baseUrl).href);
+    urls.add(new URL('cream-theme.css?v=20260903-stage-load-5', baseUrl).href);
 
     // The legacy loader owns the authoritative asset list. Reading its paths
     // avoids a second hand-maintained manifest drifting away from glmain.
@@ -176,7 +250,7 @@ const buildManifest = () => {
     const stylesheetResults = await Promise.allSettled(
       stylesheetUrls.map(async (stylesheetUrl) => ({
         stylesheetUrl,
-        css: await fetchText(stylesheetUrl),
+        css: await fetchText(stylesheetUrl, priority),
       })),
     );
     stylesheetResults.forEach((result) => {
@@ -202,64 +276,129 @@ const runPool = async <T>(items: T[], concurrency: number, task: (item: T) => Pr
   await Promise.all(workers);
 };
 
-const decodeEntryImage = (url: string) =>
-  new Promise<void>((resolve) => {
+const decodeEntryImage = (url: string, priority: FetchPriority = 'high') =>
+  new Promise<void>((resolve, reject) => {
     const image = new Image();
     image.alt = '';
     image.decoding = 'async';
     image.loading = 'eager';
-    image.setAttribute('fetchpriority', 'high');
+    image.setAttribute('fetchpriority', priority);
 
     let settled = false;
+    let decodeStarted = false;
+    const timeout = window.setTimeout(() => {
+      fail(new Error(`Imaginea entry nu s-a incarcat/decodat in timp util: ${url}`));
+    }, ENTRY_IMAGE_TIMEOUT_MS);
+
     const finish = () => {
       if (settled) return;
       settled = true;
+      window.clearTimeout(timeout);
       retainedEntryImages.push(image);
       resolve();
     };
 
-    image.addEventListener('load', () => {
-      if (typeof image.decode === 'function') void image.decode().catch(() => undefined).then(finish);
-      else finish();
+    function fail(error: Error) {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeout);
+      reject(error);
+    }
+
+    const decodeLoadedImage = () => {
+      if (settled || decodeStarted) return;
+      decodeStarted = true;
+      if (typeof image.decode !== 'function') {
+        finish();
+        return;
+      }
+      void image.decode().then(finish).catch((error: unknown) => {
+        const reason = error instanceof Error ? ` ${error.message}` : '';
+        fail(new Error(`Imaginea entry nu a putut fi decodata: ${url}.${reason}`));
+      });
+    };
+
+    image.addEventListener('load', decodeLoadedImage, {once: true});
+    image.addEventListener('error', () => {
+      fail(new Error(`Imaginea entry nu a putut fi incarcata: ${url}`));
     }, {once: true});
-    image.addEventListener('error', finish, {once: true});
     image.src = url;
     if (image.complete && image.naturalWidth > 0) {
-      if (typeof image.decode === 'function') void image.decode().catch(() => undefined).then(finish);
-      else finish();
+      decodeLoadedImage();
     }
   });
 
 const performWarmup = async () => {
   updateWarmupState({phase: 'running'});
-  installManagedPrerender();
+  const network = getNetworkProfile();
+  installManagedPrerender(network.slow);
 
-  const urls = await buildManifest();
+  const urls = await buildManifest(network.priority);
   let completed = 0;
   const failures: string[] = [];
-  const connection = (navigator as NavigatorWithConnection).connection;
-  const concurrency = connection?.saveData ? 2 : 5;
+  const concurrency = network.concurrency;
 
-  await runPool(urls, concurrency, async (url) => {
+  // Navigarea trebuie sa astepte doar documentul, runtime-ul, stilurile,
+  // fonturile, shader-ele si imaginile primului cadru. Texturile etapelor
+  // 2-7 sunt incalzite separat, la prioritate joasa, fara sa blocheze 1/7.
+  const entryUrls = urls.filter((url) => {
+    if (ENTRY_IMAGE_URLS.has(url)) return true;
+    const pathname = new URL(url).pathname;
+    return /\.(?:css|js|json|woff2?|ttf|otf)$/i.test(pathname);
+  });
+  const deferredUrls = urls.filter((url) => !entryUrls.includes(url));
+
+  const fetchAndRecord = async (
+    url: string,
+    priority: FetchPriority,
+    required = false,
+  ) => {
     try {
-      await fetchResource(url, ENTRY_IMAGE_URLS.has(url) ? 'high' : 'low');
-    } catch {
+      await fetchResource(
+        url,
+        priority,
+        required ? MAX_CRITICAL_FETCH_ATTEMPTS : 1,
+      );
+    } catch (error) {
       failures.push(url);
+      if (required) throw error;
     } finally {
       completed += 1;
       if (completed === urls.length || completed % 16 === 0) {
         updateWarmupState({phase: 'running', completed, total: urls.length});
       }
     }
-  });
+  };
 
-  await runPool([...ENTRY_IMAGE_URLS], 2, decodeEntryImage);
+  await runPool(entryUrls, concurrency, (url) =>
+    fetchAndRecord(url, network.priority, true),
+  );
+
+  await runPool([...ENTRY_IMAGE_URLS], network.slow ? 1 : 2, (url) =>
+    decodeEntryImage(url, network.priority),
+  );
   updateWarmupState({phase: 'entry-ready', completed, total: urls.length});
 
-  if (failures.length > 0) {
-    console.warn('[GREENTECH Charity] Unele resurse brandbook nu au putut fi pregatite.', failures);
+  // Lasam promisiunea principala sa se rezolve acum. Urmatoarele etape raman
+  // in acelasi HTTP cache, dar nu mai tin butonul Exploreaza in asteptare.
+  const warmDeferred = () => {
+    void runPool(deferredUrls, Math.min(concurrency, 2), (url) => fetchAndRecord(url, 'low'))
+      .then(() => {
+        if (failures.length > 0) {
+          console.warn('[GREENTECH Charity] Unele resurse brandbook nu au putut fi pregatite.', failures);
+        }
+        updateWarmupState({phase: 'ready', completed, total: urls.length});
+      });
+  };
+
+  // Nu concuram cu navigarea care urmeaza imediat dupa entry-ready. Daca
+  // vizitatorul ramane pe prima scena, browserul incalzeste restul in idle;
+  // dupa navigare, pagina brandbook devine proprietarul incarcarii progresive.
+  if ('requestIdleCallback' in window) {
+    window.requestIdleCallback(warmDeferred, {timeout: 2500});
+  } else {
+    globalThis.setTimeout(warmDeferred, 1800);
   }
-  updateWarmupState({phase: 'ready', completed, total: urls.length});
 };
 
 export const startBrandbookWarmup = () => {
@@ -267,6 +406,7 @@ export const startBrandbookWarmup = () => {
     warmupPromise = performWarmup().catch((error) => {
       console.error('[GREENTECH Charity] Preincarcarea brandbook a esuat.', error);
       updateWarmupState({phase: 'failed'});
+      throw error;
     });
   }
   return warmupPromise;

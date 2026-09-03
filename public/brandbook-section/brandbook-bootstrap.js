@@ -26,16 +26,131 @@
     const stageZeroPrimary = 'assets/image/stage0/s0_o.webp';
     const stageZeroSecondary = 'assets/image/stage0/s0_o_s.webp';
     const transparentPlaceholder = 'assets/image/stage0/transparent.png';
+    const connectedEntry = new URLSearchParams(window.location.search).get('entry') === 'connected';
+    const entryTexturePaths = new Set([
+      'assets/image/bg.webp',
+      'assets/image/bgNoise.webp',
+      'assets/image/bgMask.webp',
+      'assets/image/stage_mask.webp',
+      'assets/image/stage_mask_blue.webp',
+      'assets/image/stage_mask_black.webp',
+      stageZeroPrimary,
+      'assets/image/stage0/s0_t_ro.png',
+      'assets/image/stage0/s0_t_sp_ro.png',
+      'assets/image/stage0/s0_copy_ro.png',
+      'assets/image/stage0/s0_copy2_ro.png',
+      'assets/image/stage0/s0_copy2_g.webp',
+      'assets/image/road0_2.webp',
+      'assets/image/road1_1.webp',
+      'assets/image/chara/chara1_1.webp',
+      'assets/image/chara/chara5_3.webp',
+      'assets/image/chara/chara5_3_top.webp',
+      'assets/image/chara/chara5_3_hand.webp',
+      'assets/image/particle/particle1.webp',
+      'assets/image/mess/001.webp',
+      'assets/image/mess/002.webp',
+      'assets/image/mess/003.webp'
+    ]);
     const legacyInit = partsPrototype.init;
     const legacyLoadTextureEnd = partsPrototype.loadTextureEnd;
+    const legacyFirstLoadCompleteCheck = partsPrototype.fLoadCompCheck;
+
+    function isSlowNetwork() {
+      const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+      if (!connection) return false;
+      const effectiveType = String(connection.effectiveType || '').toLowerCase();
+      const downlink = Number(connection.downlink);
+      const rtt = Number(connection.rtt);
+      return Boolean(
+        connection.saveData ||
+        effectiveType === 'slow-2g' ||
+        effectiveType === '2g' ||
+        effectiveType === '3g' ||
+        (Number.isFinite(downlink) && downlink > 0 && downlink <= 1.5) ||
+        (Number.isFinite(rtt) && rtt >= 300)
+      );
+    }
+
+    function createDeferredTexture() {
+      const canvas = document.createElement('canvas');
+      canvas.width = 1;
+      canvas.height = 1;
+      const texture = new THREE.Texture(canvas);
+      texture.minFilter = THREE.LinearFilter;
+      texture.magFilter = THREE.LinearFilter;
+      texture.needsUpdate = true;
+      return texture;
+    }
+
+    function startDeferredTextureLoading(manager) {
+      if (manager.__greentechDeferredStarted) return;
+      const paths = manager.__greentechDeferredTextures || [];
+      if (!paths.length) return;
+
+      manager.__greentechDeferredStarted = true;
+      let cursor = 0;
+      let completed = 0;
+      const concurrency = isSlowNetwork() ? 1 : 4;
+
+      const loadNext = function () {
+        if (cursor >= paths.length) return;
+        const path = paths[cursor++];
+        const texture = manager._texMap[path];
+        const image = new Image();
+        image.decoding = 'async';
+        image.fetchPriority = 'low';
+
+        let settled = false;
+        const timeout = window.setTimeout(function () { finish(false); }, 60000);
+        const finish = function (loaded) {
+          if (settled) return;
+          settled = true;
+          window.clearTimeout(timeout);
+          if (loaded && texture) {
+            texture.image = image;
+            texture.needsUpdate = true;
+          }
+          completed += 1;
+          window.dispatchEvent(new CustomEvent('greentech:brandbook-deferred-progress', {
+            detail: {completed: completed, total: paths.length, path: path}
+          }));
+          loadNext();
+        };
+
+        image.addEventListener('load', function () {
+          if (typeof image.decode === 'function') {
+            image.decode().then(function () { finish(true); }, function () { finish(true); });
+          } else finish(true);
+        }, {once: true});
+        image.addEventListener('error', function () { finish(false); }, {once: true});
+        image.src = path;
+      };
+
+      for (let index = 0; index < Math.min(concurrency, paths.length); index += 1) {
+        loadNext();
+      }
+    }
 
     partsPrototype.init = function () {
       legacyInit.apply(this, arguments);
       if (!Array.isArray(this._trgTex) || !Array.isArray(this._firstItem)) return;
 
-      this._trgTex = this._trgTex.filter(function (path) {
+      const allTextures = this._trgTex.filter(function (path) {
         return path !== stageZeroSecondary && path !== transparentPlaceholder;
       });
+      this.__greentechDeferredTextures = allTextures.filter(function (path) {
+        return !entryTexturePaths.has(path);
+      });
+      this._trgTex = allTextures.filter(function (path) {
+        return entryTexturePaths.has(path);
+      });
+
+      // Constructorii etapelor 2-7 sunt creati de runtime impreuna cu etapa 1.
+      // Le oferim de la inceput obiecte Texture stabile de 1px; materialele
+      // pastreaza aceste referinte, iar imaginea reala este atasata ulterior.
+      this.__greentechDeferredTextures.forEach(function (path) {
+        this._texMap[path] = createDeferredTexture();
+      }, this);
 
       const textureItem = this._firstItem.find(function (item) {
         return item && item._type === 'texture';
@@ -58,6 +173,15 @@
       transparentPixel.magFilter = THREE.LinearFilter;
       transparentPixel.needsUpdate = true;
       this._texMap[transparentPlaceholder] = transparentPixel;
+
+      const manager = this;
+      window.addEventListener(
+        connectedEntry ? 'greentech:brandbook-activated' : 'greentech:brandbook-ready',
+        function () {
+          startDeferredTextureLoading(manager);
+        },
+        {once: true}
+      );
     };
 
     partsPrototype.loadTextureEnd = function (texture, item, index) {
@@ -68,6 +192,27 @@
         this._texMap[stageZeroSecondary] = texture;
       }
       return legacyLoadTextureEnd.apply(this, arguments);
+    };
+
+    partsPrototype.fLoadCompCheck = function () {
+      const result = legacyFirstLoadCompleteCheck.apply(this, arguments);
+      if (!this.__greentechEntryLoadComplete && this._imgLoadedNum >= this._imgNum) {
+        this.__greentechEntryLoadComplete = true;
+        if (connectedEntry) return result;
+        const manager = this;
+        // Fallback pentru rutele fara gate standalone. In ruta principala,
+        // evenimentul brandbook-ready porneste incarcarile chiar dupa primul cadru.
+        window.setTimeout(function () {
+          if (typeof window.requestIdleCallback === 'function') {
+            window.requestIdleCallback(function () {
+              startDeferredTextureLoading(manager);
+            }, {timeout: 2000});
+          } else {
+            startDeferredTextureLoading(manager);
+          }
+        }, 1800);
+      }
+      return result;
     };
   }
 

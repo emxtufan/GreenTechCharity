@@ -33,7 +33,8 @@
     "scrollHint": "Deruleaza in jos",
     "brandbook": {
       "ariaLabel": "Povestea GREENTECH Charity",
-      "frameTitle": "Povestea GREENTECH Charity"
+      "frameTitle": "Povestea GREENTECH Charity",
+      "loadingLabel": "Pregatim povestea"
     },
     "footer": {
       "page": {

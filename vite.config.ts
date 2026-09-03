@@ -6,7 +6,7 @@ import path from 'path';
 import {defineConfig, loadEnv, type Plugin} from 'vite';
 
 const SCENE_RUNTIME_PATCH_VERSION =
-  'ground-grass-v2-solar-inline-card-system-camera-owner-v1-local-runtime-v1';
+  'ground-grass-v2-solar-inline-card-system-camera-owner-v1-stage-visible-gate-v5-resilient-worker-v1-local-runtime-v1-slow-network-v2';
 
 function originalPages(): Plugin {
   return {
@@ -300,6 +300,74 @@ function originalSceneAssets(modelUrl: string, workerVersion: string): Plugin {
         }
         transformed = transformed.replace(cameraInputToken, cameraInputReplacement);
 
+        // Un click facut inainte ca modelul si texturile sa fie gata ramane o
+        // intentie valida, dar nu mai porneste tween-ul scenei peste un model
+        // inexistent. StageManager devine singurul owner al comenzii `show` si
+        // o executa exact o data dupa `onLoad`, pe worker si pe fallback.
+        const stageStateToken = 'isLoaded=!1;pointers=[];';
+        const stageStateReplacement =
+          'isLoaded=!1;showRequested=!1;showStarted=!1;visibleSignaled=!1;pointers=[];';
+        if (!transformed.includes(stageStateToken)) {
+          throw new Error('Nu am gasit starea de incarcare a scenei originale.');
+        }
+        transformed = transformed.replace(stageStateToken, stageStateReplacement);
+
+        const stageShowToken =
+          'show(){new cn({scroll:0},this.group).easing(vt.Cubic.InOut).to({scroll:.5},4e3).onUpdate(({scroll:e})=>this.introScroll=e).onComplete(()=>{this.autoScroll=!0,this.isAnimating=!1}).start(),this.hasOffscreen?this.worker?.postMessage({type:"show"}):this.stage?.show()}';
+        const stageShowReplacement =
+          'startTransition(){new cn({scroll:0},this.group).easing(vt.Cubic.InOut).to({scroll:.5},4e3).onUpdate(({scroll:e})=>this.introScroll=e).onComplete(()=>{this.autoScroll=!0,this.isAnimating=!1}).start()}markVisible(){if(this.visibleSignaled)return;this.visibleSignaled=!0,window.__GREENTECH_STAGE_VISIBLE__=!0,this.startTransition(),window.dispatchEvent(new CustomEvent("greencube:stage-visible"))}startShow(){if(this.showStarted)return;this.showStarted=!0,this.hasOffscreen?this.worker?.postMessage({type:"show"}):(this.stage?.show(),requestAnimationFrame(()=>requestAnimationFrame(()=>this.markVisible())))}show(){this.showRequested=!0,this.isLoaded&&this.startShow()}';
+        if (!transformed.includes(stageShowToken)) {
+          throw new Error('Nu am gasit comanda de afisare a scenei originale.');
+        }
+        transformed = transformed.replace(stageShowToken, stageShowReplacement);
+
+        const applicationStateToken = 'controllers=[];navigationRevision=0;main;';
+        const applicationStateReplacement =
+          'controllers=[];navigationRevision=0;startRequested=!1;hasStarted=!1;main;';
+        if (!transformed.includes(applicationStateToken)) {
+          throw new Error('Nu am gasit starea aplicatiei scenei originale.');
+        }
+        transformed = transformed.replace(applicationStateToken, applicationStateReplacement);
+
+        const applicationConstructorToken =
+          'constructor(){super(),this.update=this.update.bind(this)';
+        const applicationConstructorReplacement =
+          'constructor(){super(),window.addEventListener("greentech:scene-start-requested",()=>this.start()),this.update=this.update.bind(this)';
+        if (!transformed.includes(applicationConstructorToken)) {
+          throw new Error('Nu am gasit constructorul aplicatiei scenei originale.');
+        }
+        transformed = transformed.replace(
+          applicationConstructorToken,
+          applicationConstructorReplacement,
+        );
+
+        const applicationInitToken =
+          'window.requestAnimationFrame(this.update),this.init()}async init()';
+        const applicationInitReplacement =
+          'window.requestAnimationFrame(this.update),this.init().catch(e=>{console.error("[GREENTECH Charity] Initializarea scenei a esuat.",e),window.dispatchEvent(new CustomEvent("greencube:stage-failed",{detail:{reason:"scene-init"}}))})}async init()';
+        if (!transformed.includes(applicationInitToken)) {
+          throw new Error('Nu am gasit apelul de initializare al aplicatiei scenei.');
+        }
+        transformed = transformed.replace(applicationInitToken, applicationInitReplacement);
+
+        const applicationStartToken =
+          'async start(){this.introController?.hide(),this.stageManager?.show(),await qt(1e3),this.headerController?.show(),await qt(1e3),this.controllers.forEach(e=>e.show?.())}';
+        const applicationStartReplacement =
+          'async start(){if(this.hasStarted)return;this.startRequested=!0;if(!this.stageManager?.isLoaded)return;this.startRequested=!1,this.hasStarted=!0;let e=window.__GREENTECH_STAGE_VISIBLE__?Promise.resolve():new Promise(t=>window.addEventListener("greencube:stage-visible",t,{once:!0}));this.stageManager.show(),await e,this.introController?.hide(),await qt(1e3),this.headerController?.show(),await qt(1e3),this.controllers.forEach(t=>t.show?.())}';
+        if (!transformed.includes(applicationStartToken)) {
+          throw new Error('Nu am gasit pornirea aplicatiei scenei originale.');
+        }
+        transformed = transformed.replace(applicationStartToken, applicationStartReplacement);
+
+        const applicationLoadedToken =
+          'this.stageManager.onLoad(),this.resize(),this.scroll()}async start()';
+        const applicationLoadedReplacement =
+          'this.stageManager.onLoad(),this.startRequested&&this.start(),window.dispatchEvent(new CustomEvent("greencube:stage-ready")),this.resize(),this.scroll()}async start()';
+        if (!transformed.includes(applicationLoadedToken)) {
+          throw new Error('Nu am gasit continuarea aplicatiei dupa incarcarea scenei.');
+        }
+        transformed = transformed.replace(applicationLoadedToken, applicationLoadedReplacement);
+
         const workerLiteral = 'new Worker("/stage-worker.js",{type:"module"})';
         if (!transformed.includes(workerLiteral)) {
           throw new Error('Nu am gasit initializarea workerului original.');
@@ -309,14 +377,70 @@ function originalSceneAssets(modelUrl: string, workerVersion: string): Plugin {
           `new Worker("/stage-worker.js?v=${workerVersion}",{type:"module"})`,
         );
 
+        const workerInitWithVersion =
+          `this.worker=new Worker("/stage-worker.js?v=${workerVersion}",{type:"module"}),this.worker?.postMessage`;
+        const workerInitWithFailureHandling =
+          `this.worker=new Worker("/stage-worker.js?v=${workerVersion}",{type:"module"}),this.worker?.addEventListener("error",e=>window.dispatchEvent(new CustomEvent("greencube:stage-failed",{detail:{reason:"worker",message:e.message||""}}))),this.worker?.addEventListener("messageerror",()=>window.dispatchEvent(new CustomEvent("greencube:stage-failed",{detail:{reason:"worker-message"}}))),this.worker?.postMessage`;
+        if (!transformed.includes(workerInitWithVersion)) {
+          throw new Error('Nu am gasit workerul versionat pentru tratarea erorilor de retea.');
+        }
+        transformed = transformed.replace(workerInitWithVersion, workerInitWithFailureHandling);
+
+        const workerMessageToken =
+          'l==="ready"?a():l==="progress"?this.onProgress(c.data.progress):l==="over"?this.onOver(c.data.hover):l==="click"&&this.onClickCallback(c.data.hover)';
+        const workerMessageReplacement =
+          'l==="ready"?a():l==="shown"?this.markVisible():l==="failed"?window.dispatchEvent(new CustomEvent("greencube:stage-failed",{detail:{reason:c.data.reason||"scene-load"}})):l==="progress"?this.onProgress(c.data.progress):l==="over"?this.onOver(c.data.hover):l==="click"&&this.onClickCallback(c.data.hover)';
+        if (!transformed.includes(workerMessageToken)) {
+          throw new Error('Nu am gasit receptorul mesajelor din workerul scenei.');
+        }
+        transformed = transformed.replace(workerMessageToken, workerMessageReplacement);
+
+        const stageProgressToken = 'onProgress(e){this.progress=e,this.needsProgressUpdate=!0}';
+        const stageProgressReplacement =
+          'onProgress(e){this.progress=e,this.needsProgressUpdate=!0,window.dispatchEvent(new CustomEvent("greencube:stage-progress",{detail:{progress:e}}))}';
+        if (!transformed.includes(stageProgressToken)) {
+          throw new Error('Nu am gasit actualizarea progresului scenei originale.');
+        }
+        transformed = transformed.replace(stageProgressToken, stageProgressReplacement);
+
         const stageLoaded = 'onLoad(){this.isLoaded=!0,this.loader.classList.add(ls.Hidden)}';
         if (!transformed.includes(stageLoaded)) {
           throw new Error('Nu am gasit finalizarea loaderului scenei originale.');
         }
         transformed = transformed.replace(
           stageLoaded,
-          'onLoad(){this.isLoaded=!0,this.loader.classList.add(ls.Hidden),window.__GREENTECH_STAGE_READY__=!0,window.dispatchEvent(new CustomEvent("greencube:stage-ready"))}',
+          'onLoad(){this.isLoaded=!0,this.loader.classList.add(ls.Hidden),window.__GREENTECH_STAGE_READY__=!0,this.showRequested&&this.startShow()}',
         );
+      }
+
+      if (cleanId === workerPath) {
+        // Protectie suplimentara pentru cazul in care un mesaj `show` ajunge
+        // direct in worker inainte ca `await yi.load()` sa se fi terminat.
+        const workerStateToken = 'var yi;function wv';
+        const workerStateReplacement =
+          'var yi,gcShowRequested=!1,gcHasShown=!1,gcReady=!1,gcVisibleFrames=0;function gcRequestShow(){if(gcHasShown)return;gcShowRequested=!0;if(!gcReady)return;gcShowRequested=!1,gcHasShown=!0,gcVisibleFrames=0,yi?.show()}function wv';
+        if (!transformed.includes(workerStateToken)) {
+          throw new Error('Nu am gasit starea controllerului din worker.');
+        }
+        transformed = transformed.replace(workerStateToken, workerStateReplacement);
+
+        const workerInitToken =
+          'await yi.load(),self.postMessage({type:"ready"});break}case"show":{yi?.show();break}';
+        const workerInitReplacement =
+          'await yi.load().then(()=>{gcReady=!0,gcShowRequested&&gcRequestShow(),self.postMessage({type:"ready"})}).catch(()=>{self.postMessage({type:"failed",reason:"scene-load"})});break}case"show":{gcRequestShow();break}';
+        if (!transformed.includes(workerInitToken)) {
+          throw new Error('Nu am gasit handoff-ul ready/show din worker.');
+        }
+        transformed = transformed.replace(workerInitToken, workerInitReplacement);
+
+        const workerRenderedFrameToken =
+          'this.renderer.render(this.scene,this.camera),this.renderer.setRenderTarget(null)}};';
+        const workerRenderedFrameReplacement =
+          'this.renderer.render(this.scene,this.camera),this.renderer.setRenderTarget(null),gcHasShown&&gcVisibleFrames<2&&(gcVisibleFrames++,gcVisibleFrames===2&&self.postMessage({type:"shown"}))}};';
+        if (!transformed.includes(workerRenderedFrameToken)) {
+          throw new Error('Nu am gasit finalul cadrului randat in worker.');
+        }
+        transformed = transformed.replace(workerRenderedFrameToken, workerRenderedFrameReplacement);
       }
 
       return {code: transformed, map: null};
@@ -356,7 +480,7 @@ export default defineConfig(({mode}) => {
       },
     },
     build: {
-      minify: false,
+      minify: 'esbuild',
       rollupOptions: {
         input: {
           home: path.resolve(__dirname, 'index.html'),

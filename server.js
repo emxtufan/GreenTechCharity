@@ -81,6 +81,17 @@ if (production) {
         return;
       }
 
+      if (/[\\/]brandbook-section[\\/]assets[\\/]/.test(filePath)) {
+        const versioned = /[?&]v=/.test(String(res.req?.originalUrl || ''));
+        if (versioned) {
+          res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+          res.setHeader('CDN-Cache-Control', 'public, max-age=31536000, immutable');
+        } else {
+          res.setHeader('Cache-Control', 'public, max-age=3600, must-revalidate');
+        }
+        return;
+      }
+
       if (filePath.endsWith('.glb')) {
         res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
         res.setHeader('CDN-Cache-Control', 'public, max-age=31536000, immutable');

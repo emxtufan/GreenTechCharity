@@ -1,10 +1,13 @@
 import {readFile, writeFile} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const contentPath = path.join(projectRoot, 'public', 'brandbook-section', 'content.json');
-const content = JSON.parse(await readFile(contentPath, 'utf8'));
+const contentSource = await readFile(contentPath, 'utf8');
+const contentVersion = createHash('sha256').update(contentSource).digest('hex').slice(0, 16);
+const content = JSON.parse(contentSource);
 const site = content.siteMeta;
 const contactEmail = content.mainSite?.pages?.contact?.email;
 const siteDescription = content.mainSite?.pages?.home?.seo?.description;
@@ -86,6 +89,7 @@ const titleBinding = (binding, valuePath) =>
     : `data-bb-content="${valuePath}"`;
 
 const markerPattern = /\s*<!-- gc-site-metadata:start -->[\s\S]*?<!-- gc-site-metadata:end -->\s*/i;
+const contentSnapshotPattern = /\s*<!-- gc-content-snapshot:start -->[\s\S]*?<!-- gc-content-snapshot:end -->\s*/i;
 const removableMetaPattern = /\s*<meta\b(?=[^>]*\b(?:name|property)=["'](?:description|robots|theme-color|color-scheme|application-name|mobile-web-app-capable|apple-mobile-web-app-capable|apple-mobile-web-app-status-bar-style|apple-mobile-web-app-title|og:[^"']+|twitter:[^"']+)["'])[^>]*>\s*/gi;
 const removableLinkPattern = /\s*<link\b(?=[^>]*\brel=["'](?:shortcut icon|icon|apple-touch-icon|manifest|canonical)["'])[^>]*>\s*/gi;
 
@@ -140,6 +144,13 @@ function buildMetadata(config) {
     `<link rel="manifest" href="${escapeAttribute(site.icons.manifest)}">`,
   );
 
+  if (config.file === 'index.html') {
+    lines.push(
+      '<script>window.__GREENTECH_EARLY_START_REQUESTED__=!1;document.addEventListener("click",function(e){e.target instanceof Element&&e.target.closest("._34fe16")&&(window.__GREENTECH_EARLY_START_REQUESTED__=!0)},!0)</script>',
+      '<script defer src="/network-status.js?v=20260903-slow-network-2"></script>',
+    );
+  }
+
   if (canonical && page.robots === 'index,follow') {
     const organisation = {
       '@context': 'https://schema.org',
@@ -160,10 +171,59 @@ function buildMetadata(config) {
   return lines.join('\n');
 }
 
+function buildContentSnapshot() {
+  const snapshot = JSON.stringify(content)
+    .replaceAll('<', '\\u003c')
+    .replaceAll('\u2028', '\\u2028')
+    .replaceAll('\u2029', '\\u2029');
+
+  return `<!-- gc-content-snapshot:start -->
+<script>
+window.GREENTECH_CHARITY_CONTENT_VERSION='${contentVersion}';
+window.GREENTECH_CHARITY_CONTENT=${snapshot};
+(function(){
+  function read(source,path){return String(path||'').split('.').reduce(function(value,key){return value==null?undefined:value[key]},source)}
+  function direct(element,value){var node=Array.from(element.childNodes).find(function(item){return item.nodeType===Node.TEXT_NODE&&item.nodeValue&&item.nodeValue.trim()});if(node){node.nodeValue=String(value);return}var text=document.createTextNode(String(value));if(element.dataset.bbContentDirectPosition==='after-first'&&element.firstChild)element.firstChild.after(text);else element.insertBefore(text,element.firstChild)}
+  function tail(element,value){var preserved=element.firstElementChild,node=preserved?preserved.nextSibling:element.firstChild;while(node){var next=node.nextSibling;node.remove();node=next}var template=document.createElement('template');template.innerHTML=String(value);element.appendChild(template.content)}
+  function bind(root,selector,attribute,apply){root.querySelectorAll(selector).forEach(function(element){var value=read(window.GREENTECH_CHARITY_CONTENT,element.dataset[attribute]);if(value!=null)apply(element,value)})}
+  function apply(root){
+    root=root||document;
+    bind(root,'[data-gc-content]','gcContent',function(element,value){element.textContent=String(value)});
+    bind(root,'[data-bb-content]','bbContent',function(element,value){element.textContent=String(value)});
+    bind(root,'[data-gc-content-html]','gcContentHtml',function(element,value){element.innerHTML=String(value)});
+    bind(root,'[data-bb-content-html]','bbContentHtml',function(element,value){element.innerHTML=String(value)});
+    bind(root,'[data-gc-content-direct]','gcContentDirect',direct);
+    bind(root,'[data-bb-content-direct]','bbContentDirect',direct);
+    bind(root,'[data-bb-content-prefix]','bbContentPrefix',direct);
+    bind(root,'[data-bb-content-tail-html]','bbContentTailHtml',tail);
+    bind(root,'[data-gc-content-meta]','gcContentMeta',function(element,value){element.setAttribute('content',String(value))});
+    bind(root,'[data-bb-content-meta]','bbContentMeta',function(element,value){element.setAttribute('content',String(value))});
+    bind(root,'[data-gc-content-aria]','gcContentAria',function(element,value){element.setAttribute('aria-label',String(value))});
+    bind(root,'[data-bb-content-aria]','bbContentAria',function(element,value){element.setAttribute('aria-label',String(value))});
+    bind(root,'[data-gc-content-alt]','gcContentAlt',function(element,value){element.setAttribute('alt',String(value))});
+    bind(root,'[data-bb-content-alt]','bbContentAlt',function(element,value){element.setAttribute('alt',String(value))});
+    bind(root,'[data-gc-content-email-href]','gcContentEmailHref',function(element,value){element.setAttribute('href','mailto:'+String(value))});
+    root.querySelectorAll('[data-gc-content-poi-titles]').forEach(function(element){var value=read(window.GREENTECH_CHARITY_CONTENT,element.dataset.gcContentPoiTitles);if(!Array.isArray(value))return;try{var points=JSON.parse(decodeURIComponent(element.dataset.poi||'[]'));points.forEach(function(point,index){point.title=typeof value[index]==='string'?value[index]:''});element.dataset.poi=encodeURI(JSON.stringify(points))}catch(error){console.error('[GREENTECH Charity] Snapshot-ul etichetelor 3D nu a putut fi aplicat.',error)}});
+    document.documentElement.dataset.gcContentSnapshot='true';
+  }
+  window.__GREENTECH_APPLY_CONTENT_SNAPSHOT__=apply;
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){apply(document)},{once:true});else apply(document);
+})();
+</script>
+<!-- gc-content-snapshot:end -->`;
+}
+
 async function syncPage(config) {
   const filePath = path.join(projectRoot, config.file);
   let html = await readFile(filePath, 'utf8');
+  if (config.file === 'index.html') {
+    html = html.replace(
+      /<script\s+async(?:\s+defer=["']defer["'])?\s+type=["']module["']\s+src=["']\/src\/main\.tsx["']><\/script>/i,
+      '<script type="module" src="/src/main.tsx"></script>',
+    );
+  }
   html = html.replace(markerPattern, '');
+  html = html.replace(contentSnapshotPattern, '');
   html = html.replace(removableMetaPattern, '');
   html = html.replace(removableLinkPattern, '');
   html = html.replace(
@@ -174,7 +234,12 @@ async function syncPage(config) {
   const metadata = buildMetadata(config);
   const viewportPattern = /(<meta\b(?=[^>]*\bname=["']viewport["'])[^>]*>)/i;
   if (!viewportPattern.test(html)) throw new Error(`Lipseste viewport in ${config.file}`);
-  html = html.replace(viewportPattern, `$1\n${metadata}`);
+  html = html.replace(viewportPattern, `$1\n${metadata}\n${buildContentSnapshot()}`);
+  html = html.replace(
+    /(<link\b[^>]*\bhref=["']content\.json)(?:\?[^"']*)?(["'][^>]*>)/i,
+    `$1?v=${contentVersion}$2`,
+  );
+  if (!/<\/body>/i.test(html)) throw new Error(`Lipseste body in ${config.file}`);
   await writeFile(filePath, html, 'utf8');
 }
 

@@ -38,6 +38,8 @@ type BrandbookMessage = {
   source?: string;
   type?: string;
   ring?: PortalAnchor;
+  requestId?: number;
+  reason?: string;
 };
 
 type SectionPhase = 'house' | 'entering' | 'active' | 'leaving';
@@ -51,6 +53,7 @@ type WrapperCopy = {
   brandbook: {
     ariaLabel: string;
     frameTitle: string;
+    loadingLabel: string;
   };
 };
 
@@ -63,6 +66,7 @@ const EMPTY_WRAPPER_COPY: WrapperCopy = {
   brandbook: {
     ariaLabel: '',
     frameTitle: '',
+    loadingLabel: '',
   },
 };
 
@@ -85,6 +89,7 @@ const normaliseWrapperCopy = (value: unknown): WrapperCopy => {
     brandbook: {
       ariaLabel: readString(source.brandbook?.ariaLabel),
       frameTitle: readString(source.brandbook?.frameTitle),
+      loadingLabel: readString(source.brandbook?.loadingLabel),
     },
   };
 };
@@ -104,11 +109,22 @@ const PORTAL_COVER_FROM = 0.9;
 // Tranzitia catre brandbook ramane oprita pana stabilim noul handoff 2D.
 // Astfel pagina principala pastreaza un singur context WebGL pe toate device-urile.
 const ENABLE_BRANDBOOK_TRANSITION = false;
+// Desktopurile pot pregati cadrul 1/7 intr-un iframe conectat dupa ce scena
+// casei este stabila. Pe profilurile mobile/low-memory ramane un singur WebGL.
+const ENABLE_PREPARED_BRANDBOOK_FRAME = true;
+const PREPARED_ENTRY_TIMEOUT_MS = 15_000;
+const PREPARED_ENTRY_MAX_RETRIES = 1;
 
 type NavigatorCapabilities = Navigator & {
   deviceMemory?: number;
   userAgentData?: {
     mobile?: boolean;
+  };
+  connection?: {
+    saveData?: boolean;
+    effectiveType?: string;
+    downlink?: number;
+    rtt?: number;
   };
 };
 
@@ -129,6 +145,17 @@ const shouldUseStandaloneBrandbook = () => {
   const lowMemory = Number.isFinite(deviceMemory) && deviceMemory > 0 && deviceMemory <= 4;
   const logicalCores = Number(capabilities.hardwareConcurrency);
   const lowCoreCount = Number.isFinite(logicalCores) && logicalCores > 0 && logicalCores <= 4;
+  const effectiveType = capabilities.connection?.effectiveType?.toLowerCase();
+  const downlink = Number(capabilities.connection?.downlink);
+  const rtt = Number(capabilities.connection?.rtt);
+  const slowNetwork = Boolean(
+    capabilities.connection?.saveData ||
+    effectiveType === 'slow-2g' ||
+    effectiveType === '2g' ||
+    effectiveType === '3g' ||
+    (Number.isFinite(downlink) && downlink > 0 && downlink <= 1.5) ||
+    (Number.isFinite(rtt) && rtt >= 300)
+  );
 
   return (
     mobileClientHint ||
@@ -136,7 +163,8 @@ const shouldUseStandaloneBrandbook = () => {
     iPadDesktopMode ||
     coarseCompactViewport ||
     lowMemory ||
-    lowCoreCount
+    lowCoreCount ||
+    slowNetwork
   );
 };
 
@@ -198,6 +226,9 @@ export default function App() {
   const [useStandaloneBrandbook] = useState(shouldUseStandaloneBrandbook);
   const [sceneReady, setSceneReady] = useState(() => Boolean(window.__GREENTECH_STAGE_READY__));
   const [sectionPhase, setSectionPhase] = useState<SectionPhase>('house');
+  const [brandbookLaunchPending, setBrandbookLaunchPending] = useState(false);
+  const [brandbookLoaderVisible, setBrandbookLoaderVisible] = useState(false);
+  const [brandbookFrameAttempt, setBrandbookFrameAttempt] = useState(0);
   const [wrapperCopy, setWrapperCopy] = useState<WrapperCopy>(EMPTY_WRAPPER_COPY);
   const sectionPhaseRef = useRef<SectionPhase>('house');
   const brandbookReady = useRef(false);
@@ -207,6 +238,150 @@ export default function App() {
   const portalAnchor = useRef<PortalAnchor>({x: 0.5, y: 0.5, radius: 180});
   const childRingAnchor = useRef<PortalAnchor>({x: 0.5, y: 0.5, radius: 180});
   const standaloneNavigationStarted = useRef(false);
+  const preparedOpenRequested = useRef(false);
+  const preparedNavigationPending = useRef(false);
+  const preparedActivationPending = useRef(false);
+  const preparedRequestId = useRef(0);
+  const preparedRetryCount = useRef(0);
+  const preparedWatchdog = useRef<number | undefined>(undefined);
+
+  const setPhase = useCallback((phase: SectionPhase) => {
+    sectionPhaseRef.current = phase;
+    setSectionPhase(phase);
+
+    const transitioning = phase === 'entering' || phase === 'leaving';
+    document.body.classList.toggle('greentech-section-transitioning', transitioning);
+    document.body.classList.toggle('brandbook-section-active', phase === 'active');
+  }, []);
+
+  const postToBrandbook = useCallback((type: string, payload: Record<string, unknown> = {}) => {
+    brandbookFrameElement.current?.contentWindow?.postMessage(
+      {source: 'greentech-parent', type, ...payload},
+      window.location.origin,
+    );
+  }, []);
+
+  const clearPreparedWatchdog = useCallback(() => {
+    window.clearTimeout(preparedWatchdog.current);
+    preparedWatchdog.current = undefined;
+  }, []);
+
+  const clearPreparedBusyState = useCallback(() => {
+    document.querySelectorAll<HTMLElement>('[aria-busy="true"]').forEach((element) => {
+      element.removeAttribute('aria-busy');
+    });
+  }, []);
+
+  const recoverPreparedBrandbook = useCallback((requestId: number, reason: string) => {
+    if (
+      useStandaloneBrandbook ||
+      !preparedActivationPending.current ||
+      requestId !== preparedRequestId.current
+    ) return;
+
+    clearPreparedWatchdog();
+    preparedActivationPending.current = false;
+    brandbookReady.current = false;
+
+    if (preparedRetryCount.current < PREPARED_ENTRY_MAX_RETRIES) {
+      preparedRetryCount.current += 1;
+      preparedOpenRequested.current = true;
+      setBrandbookFrameAttempt((attempt) => attempt + 1);
+      return;
+    }
+
+    console.error('[GREENTECH Charity] Sectiunea interactiva nu a putut fi pregatita.', reason);
+    preparedOpenRequested.current = false;
+    preparedNavigationPending.current = false;
+    setBrandbookFrameAttempt((attempt) => attempt + 1);
+    setBrandbookLaunchPending(false);
+    setBrandbookLoaderVisible(false);
+    setPhase('house');
+    clearPreparedBusyState();
+  }, [clearPreparedBusyState, clearPreparedWatchdog, setPhase, useStandaloneBrandbook]);
+
+  const activatePreparedBrandbook = useCallback(() => {
+    if (useStandaloneBrandbook) return false;
+
+    setBrandbookLaunchPending(true);
+    if (!brandbookReady.current) return false;
+
+    preparedOpenRequested.current = false;
+    if (preparedActivationPending.current) return true;
+
+    // Cadrul ramane complet ascuns pana cand iframe-ul confirma ca scena
+    // WebGL a fost randata dupa deblocare. Astfel nu expunem fundalul crem
+    // dintre reluarea rendererului si primul paint real.
+    preparedActivationPending.current = true;
+    const requestId = ++preparedRequestId.current;
+    postToBrandbook('entry-active', {requestId});
+    clearPreparedWatchdog();
+    preparedWatchdog.current = window.setTimeout(() => {
+      recoverPreparedBrandbook(requestId, 'timeout');
+    }, PREPARED_ENTRY_TIMEOUT_MS);
+    return true;
+  }, [clearPreparedWatchdog, postToBrandbook, recoverPreparedBrandbook, useStandaloneBrandbook]);
+
+  const completePreparedBrandbook = useCallback((requestId: number) => {
+    if (
+      useStandaloneBrandbook ||
+      !preparedActivationPending.current ||
+      requestId !== preparedRequestId.current
+    ) return;
+
+    clearPreparedWatchdog();
+    preparedActivationPending.current = false;
+    preparedOpenRequested.current = false;
+    preparedNavigationPending.current = false;
+    entryProgress.current = 1;
+    setBrandbookLaunchPending(false);
+    setBrandbookLoaderVisible(false);
+    preparedRetryCount.current = 0;
+
+    // renderPortal() lasa valori inline pentru vechea tranzitie prin cerc.
+    // Deschiderea directa trebuie sa le elimine atomic; altfel CSS-ul nou este
+    // corect, dar pierde in cascada in fata acelui clip-path inline.
+    if (brandbookSectionElement.current) {
+      brandbookSectionElement.current.style.clipPath = '';
+    }
+    if (brandbookFrameElement.current) {
+      brandbookFrameElement.current.style.transform = '';
+    }
+    setPhase('active');
+
+    if (!window.history.state?.greentechBrandbookActive) {
+      window.history.pushState(
+        Object.assign({}, window.history.state || {}, {greentechBrandbookActive: true}),
+        '',
+        window.location.href,
+      );
+    }
+
+    clearPreparedBusyState();
+  }, [clearPreparedBusyState, clearPreparedWatchdog, setPhase, useStandaloneBrandbook]);
+
+  const deactivatePreparedBrandbook = useCallback(() => {
+    clearPreparedWatchdog();
+    preparedOpenRequested.current = false;
+    preparedNavigationPending.current = false;
+    preparedActivationPending.current = false;
+    preparedRetryCount.current = 0;
+    entryProgress.current = 0;
+    setBrandbookLaunchPending(false);
+    setBrandbookLoaderVisible(false);
+    setPhase('house');
+    postToBrandbook('park-at-entry');
+    clearPreparedBusyState();
+  }, [clearPreparedBusyState, clearPreparedWatchdog, postToBrandbook, setPhase]);
+
+  useEffect(() => {
+    if (!brandbookLaunchPending) return;
+
+    // Deschiderile rapide fac schimbul direct intre cele doua scene. Loaderul
+    // este doar plasa de siguranta pentru un upload/paint GPU mai lent.
+    const timer = window.setTimeout(() => setBrandbookLoaderVisible(true), 180);
+    return () => window.clearTimeout(timer);
+  }, [brandbookLaunchPending]);
 
   useEffect(() => installHouseCameraExperience(), []);
 
@@ -349,26 +524,94 @@ export default function App() {
     exploreTab.classList.add('_6ebb2e');
 
     menu.appendChild(legacyContactTab);
-    menu.appendChild(exploreTab);
 
-    const persistentTabs = [...baseHeaderItems, legacyContactTab, exploreTab];
+    const tabsBeforeExplore = [...baseHeaderItems, legacyContactTab];
+    const persistentTabs = [...tabsBeforeExplore, exploreTab];
     const activeIndex = persistentTabs.findIndex(
       (item) => item.dataset.pathname === window.location.pathname,
     );
 
-    persistentTabs.forEach((item, index) => {
-      item.classList.add('_0ca877');
-      item.dataset.inHeader = 'true';
-      item.style.setProperty('--offset', String(persistentTabs.length - index));
-      item.style.setProperty('--index', String(index));
-      item.classList.toggle('_5257f8', activeIndex >= index);
-      item.classList.toggle('gc-tab-collapsed', activeIndex > index);
-      item.querySelector('a')?.classList.toggle('_5a376b', activeIndex === index);
-    });
+    const layoutPersistentTabs = (includeExplore: boolean) => {
+      const visibleCount = includeExplore ? persistentTabs.length : tabsBeforeExplore.length;
 
-    let exploreNavigationPending = false;
+      persistentTabs.forEach((item, index) => {
+        item.classList.add('_0ca877');
+        item.dataset.inHeader = 'true';
+        // In starea initiala, Contact ocupa ultimul slot. Exploreaza sta exact
+        // sub marginea stivei, in afara viewportului, fara rand sau coloana
+        // rezervata. La reveal, cele trei taburi existente se deplaseaza
+        // impreuna cu un slot, iar Exploreaza intra in locul eliberat.
+        const offset = !includeExplore && item === exploreTab
+          ? 1
+          : visibleCount - index;
+        item.style.setProperty('--offset', String(offset));
+        item.style.setProperty('--index', String(index));
+        item.classList.toggle('_5257f8', activeIndex >= index);
+        item.classList.toggle('gc-tab-collapsed', activeIndex > index);
+        item.querySelector('a')?.classList.toggle('_5a376b', activeIndex === index);
+      });
+    };
+
+    menu.classList.add('gc-explore-stack');
+    exploreTab.classList.add('gc-explore-pending');
+    exploreTab.setAttribute('aria-hidden', 'true');
+    exploreTab.inert = true;
+    layoutPersistentTabs(false);
+
+    let exploreRevealed = false;
+    let revealFrame = 0;
+    let settleFrame = 0;
+    let revealCleanupTimer = 0;
+    const finishStackAnimation = () => {
+      menu.classList.remove('gc-stack-animating');
+      window.clearTimeout(revealCleanupTimer);
+    };
+    const onExploreTransitionEnd = (event: TransitionEvent) => {
+      if (event.target === exploreTab && event.propertyName === 'transform') {
+        finishStackAnimation();
+      }
+    };
+    exploreTab.addEventListener('transitionend', onExploreTransitionEnd);
+
+    const revealExploreTab = () => {
+      if (exploreRevealed) return;
+      exploreRevealed = true;
+      menu.classList.add('gc-stack-animating');
+      menu.appendChild(exploreTab);
+
+      // Doua cadre garanteaza ca browserul a compus pozitia fara Exploreaza
+      // inainte sa animam noua geometrie; evitam flicker-ul la cache rece.
+      revealFrame = window.requestAnimationFrame(() => {
+        settleFrame = window.requestAnimationFrame(() => {
+          layoutPersistentTabs(true);
+          exploreTab.classList.remove('gc-explore-pending');
+          exploreTab.classList.add('gc-explore-ready');
+          exploreTab.removeAttribute('aria-hidden');
+          exploreTab.inert = false;
+          revealCleanupTimer = window.setTimeout(finishStackAnimation, 900);
+        });
+      });
+    };
+
+    const revealWhenHouseIsReady = () => {
+      if (document.documentElement.dataset.gcCameraPhase === 'orbiting') {
+        revealExploreTab();
+      }
+    };
+    const cameraPhaseObserver = new MutationObserver(revealWhenHouseIsReady);
+    cameraPhaseObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-gc-camera-phase'],
+    });
+    revealWhenHouseIsReady();
+
     const onPageShow = () => {
-      exploreNavigationPending = false;
+      clearPreparedWatchdog();
+      preparedNavigationPending.current = false;
+      preparedActivationPending.current = false;
+      preparedRetryCount.current = 0;
+      setBrandbookLaunchPending(false);
+      setBrandbookLoaderVisible(false);
     };
     window.addEventListener('pageshow', onPageShow);
 
@@ -393,12 +636,51 @@ export default function App() {
 
       event.preventDefault();
       event.stopImmediatePropagation();
-      if (exploreNavigationPending) return;
-      exploreNavigationPending = true;
+
+      // Cat timp runtime-ul original detine camera si executa zoom-ul, tabul
+      // Exploreaza este ascuns. Protectia ramane si aici pentru clickul care
+      // poate ajunge in acelasi frame in care incepe animatia.
+      const cameraPhase = document.documentElement.dataset.gcCameraPhase;
+      if (
+        document.documentElement.classList.contains('gc-camera-zoom-locked') ||
+        cameraPhase === 'clouds' ||
+        cameraPhase === 'zooming' ||
+        cameraPhase === 'settling'
+      ) {
+        return;
+      }
+
+      if (preparedNavigationPending.current) return;
+      preparedNavigationPending.current = true;
+      preparedRetryCount.current = 0;
+      clickedAnchor.setAttribute('aria-busy', 'true');
+      setBrandbookLaunchPending(true);
+
+      if (useStandaloneBrandbook) {
+        // Pe mobil si pe conexiuni lente intram imediat in documentul tinta.
+        // Loaderul propriu al sectiunii poate afisa progresul, fara ca un pool
+        // serial de preload-uri sa faca butonul sa para blocat pe pagina casei.
+        window.location.assign(exploreRoute);
+        return;
+      }
+
+      if (!useStandaloneBrandbook && ENABLE_PREPARED_BRANDBOOK_FRAME) {
+        preparedOpenRequested.current = true;
+        // Cadrul conectat este autoritatea: daca a randat deja 1/7, il afisam
+        // in acelasi click, fara sa mai asteptam pool-ul HTTP din pagina casei.
+        activatePreparedBrandbook();
+        return;
+      }
 
       void (async () => {
-        clickedAnchor.setAttribute('aria-busy', 'true');
-        await waitForBrandbookWarmup();
+        try {
+          await waitForBrandbookWarmup();
+        } catch (error) {
+          // Warmup-ul este o optimizare, nu o conditie de navigare. Daca un
+          // request de pregatire expira, documentul tinta primeste sansa sa
+          // incarce resursa direct, fara sa lase butonul blocat pe pending.
+          console.warn('[GREENTECH Charity] Continuam fara warmup complet.', error);
+        }
         window.location.assign(exploreRoute);
       })();
     };
@@ -410,6 +692,12 @@ export default function App() {
     return () => {
       window.removeEventListener('pageshow', onPageShow);
       document.removeEventListener('click', onExploreClick, true);
+      cameraPhaseObserver.disconnect();
+      window.cancelAnimationFrame(revealFrame);
+      window.cancelAnimationFrame(settleFrame);
+      window.clearTimeout(revealCleanupTimer);
+      exploreTab.removeEventListener('transitionend', onExploreTransitionEnd);
+      menu.classList.remove('gc-explore-stack', 'gc-stack-animating');
       legacyContactTab.remove();
       exploreTab.remove();
       snapshots.forEach(({item, className, style, inHeader, anchorClassName}) => {
@@ -432,10 +720,10 @@ export default function App() {
       }
       delete menu.dataset.gcPersistentNavReady;
     };
-  }, [wrapperCopy.navigation]);
+  }, [activatePreparedBrandbook, clearPreparedWatchdog, useStandaloneBrandbook, wrapperCopy.navigation]);
 
   useEffect(() => {
-    if (!ENABLE_BRANDBOOK_TRANSITION) return;
+    if (!ENABLE_PREPARED_BRANDBOOK_FRAME) return;
     if (useStandaloneBrandbook) return;
 
     let releaseTimer: number | undefined;
@@ -473,41 +761,35 @@ export default function App() {
         window.dispatchEvent(
           new CustomEvent('greentech:card-request', {detail: {card: requestedCard}}),
         );
+      })
+      .catch((error) => {
+        console.error('[GREENTECH Charity] Scena principala nu a putut fi incarcata.', error);
+        window.dispatchEvent(
+          new CustomEvent('greencube:stage-failed', {detail: {reason: 'runtime'}}),
+        );
       });
   }, []);
 
   useEffect(() => {
-    const headline = document.querySelector<HTMLElement>('._b400e8 ._c3bb59');
-    if (!headline) return;
+    // Scena principala are prioritate absoluta. In special pe 3G, pornirea
+    // brandbook-ului in paralel concura cu modelul, texturile si workerul si
+    // putea lasa zoom-ul fara casa. Dupa `stage-ready`, profilul de retea din
+    // preload decide singur concurenta si daca prerender-ul este permis.
+    if (useStandaloneBrandbook) return;
 
-    const startWhenHeadlineAppears = () => {
-      if (!headline.classList.contains('_ea58ee')) return;
-      observer.disconnect();
-      void startBrandbookWarmup();
+    let started = false;
+    const startAfterStage = () => {
+      if (started) return;
+      started = true;
+      void startBrandbookWarmup().catch((error) => {
+        console.warn('[GREENTECH Charity] Warmup-ul secundar a esuat; navigarea directa ramane disponibila.', error);
+      });
     };
 
-    const observer = new MutationObserver(startWhenHeadlineAppears);
-    observer.observe(headline, {attributes: true, attributeFilter: ['class']});
-    startWhenHeadlineAppears();
-
-    return () => observer.disconnect();
-  }, []);
-
-  const setPhase = useCallback((phase: SectionPhase) => {
-    sectionPhaseRef.current = phase;
-    setSectionPhase(phase);
-
-    const transitioning = phase === 'entering' || phase === 'leaving';
-    document.body.classList.toggle('greentech-section-transitioning', transitioning);
-    document.body.classList.toggle('brandbook-section-active', phase === 'active');
-  }, []);
-
-  const postToBrandbook = useCallback((type: string) => {
-    brandbookFrameElement.current?.contentWindow?.postMessage(
-      {source: 'greentech-parent', type},
-      window.location.origin,
-    );
-  }, []);
+    window.addEventListener('greencube:stage-ready', startAfterStage);
+    if (window.__GREENTECH_STAGE_READY__) startAfterStage();
+    return () => window.removeEventListener('greencube:stage-ready', startAfterStage);
+  }, [useStandaloneBrandbook]);
 
   const renderPortal = useCallback(() => {
     const section = brandbookSectionElement.current;
@@ -655,17 +937,49 @@ export default function App() {
         if (event.data.ring) childRingAnchor.current = event.data.ring;
         brandbookReady.current = true;
         renderPortal();
+        if (preparedOpenRequested.current) activatePreparedBrandbook();
+      } else if (event.data.type === 'entry-painted') {
+        if (event.data.ring) childRingAnchor.current = event.data.ring;
+        completePreparedBrandbook(Number(event.data.requestId));
+      } else if (
+        event.data.type === 'entry-failed' ||
+        event.data.type === 'webgl-context-lost'
+      ) {
+        recoverPreparedBrandbook(
+          Number(event.data.requestId),
+          event.data.reason || event.data.type,
+        );
       } else if (event.data.type === 'entry-anchor' && event.data.ring) {
         childRingAnchor.current = event.data.ring;
         renderPortal();
       } else if (event.data.type === 'return-to-house') {
-        closeBrandbook();
+        if (!useStandaloneBrandbook && ENABLE_PREPARED_BRANDBOOK_FRAME) {
+          if (window.history.state?.greentechBrandbookActive) window.history.back();
+          else deactivatePreparedBrandbook();
+        } else {
+          closeBrandbook();
+        }
       }
     };
 
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
-  }, [closeBrandbook, renderPortal]);
+  }, [activatePreparedBrandbook, closeBrandbook, completePreparedBrandbook, deactivatePreparedBrandbook, recoverPreparedBrandbook, renderPortal, useStandaloneBrandbook]);
+
+  useEffect(() => {
+    if (useStandaloneBrandbook || !ENABLE_PREPARED_BRANDBOOK_FRAME) return;
+
+    const onPopState = () => {
+      if (
+        sectionPhaseRef.current === 'active' &&
+        !window.history.state?.greentechBrandbookActive
+      ) {
+        deactivatePreparedBrandbook();
+      }
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, [deactivatePreparedBrandbook, useStandaloneBrandbook]);
 
   useEffect(() => {
     const onResize = () => renderPortal();
@@ -675,9 +989,10 @@ export default function App() {
 
   useEffect(() => {
     return () => {
+      clearPreparedWatchdog();
       document.body.classList.remove('brandbook-section-active', 'greentech-section-transitioning');
     };
-  }, []);
+  }, [clearPreparedWatchdog]);
 
   const sectionPresent = sectionPhase !== 'house';
   const sectionInteractive = sectionPhase === 'active';
@@ -695,19 +1010,24 @@ export default function App() {
           height: 100svh;
           overflow: hidden;
           isolation: isolate;
-          visibility: hidden;
+          visibility: visible;
+          opacity: 0;
           pointer-events: none;
           background: #efede0;
-          clip-path: circle(0 at 50% 50%);
-          will-change: clip-path;
+          clip-path: none;
+          will-change: opacity;
         }
 
         .greentech-brandbook-section.is-present {
-          visibility: visible;
+          opacity: 1;
         }
 
         .greentech-brandbook-section.is-interactive {
           pointer-events: auto;
+        }
+
+        .greentech-brandbook-section.is-direct {
+          clip-path: none;
         }
 
         .greentech-brandbook-frame {
@@ -720,11 +1040,98 @@ export default function App() {
           will-change: transform;
         }
 
+        .greentech-brandbook-launch-loader {
+          position: fixed;
+          inset: 0;
+          z-index: 1100;
+          display: grid;
+          place-content: center;
+          justify-items: center;
+          gap: 1rem;
+          visibility: hidden;
+          opacity: 0;
+          pointer-events: none;
+          color: #1f3a27;
+          background: rgba(239, 237, 224, .97);
+          transition: opacity .18s linear, visibility 0s linear .18s;
+        }
+
+        .greentech-brandbook-launch-loader.is-visible {
+          visibility: visible;
+          opacity: 1;
+          pointer-events: auto;
+          transition: opacity .18s linear;
+        }
+
+        .greentech-brandbook-launch-loader__mark {
+          width: 2.75rem;
+          aspect-ratio: 1;
+          border: 1px solid rgba(31, 58, 39, .22);
+          border-top-color: #64a045;
+          border-right-color: #64a045;
+          border-radius: 50%;
+          animation: greentech-brandbook-loader-spin .9s linear infinite;
+        }
+
+        .greentech-brandbook-launch-loader__label {
+          font-family: Helvetica, 'Helvetica Neue', Arial, sans-serif;
+          font-size: .68rem;
+          font-weight: 600;
+          letter-spacing: .16em;
+          text-transform: uppercase;
+        }
+
+        @keyframes greentech-brandbook-loader-spin {
+          to { transform: rotate(1turn); }
+        }
+
         body.greentech-section-transitioning ._68f6d6,
         body.brandbook-section-active ._68f6d6 {
           opacity: 0;
           pointer-events: none;
           transition: opacity .35s linear;
+        }
+
+        .gc-explore-stack.gc-stack-animating > ._2680ad._0ca877 {
+          transition:
+            top .72s cubic-bezier(.22, 1, .36, 1),
+            left .72s cubic-bezier(.22, 1, .36, 1),
+            clip-path .35s var(--ease-out-cubic);
+          will-change: top, left, clip-path;
+        }
+
+        .gc-explore-stack > [data-gc-explore-tab].gc-explore-pending {
+          opacity: 0;
+          clip-path: inset(100% 0 0 0);
+          transform: translate3d(0, var(--column), 0);
+          pointer-events: none;
+        }
+
+        .gc-explore-stack.gc-stack-animating > [data-gc-explore-tab] {
+          transition:
+            top .72s cubic-bezier(.22, 1, .36, 1),
+            left .72s cubic-bezier(.22, 1, .36, 1),
+            transform .72s cubic-bezier(.22, 1, .36, 1),
+            opacity .32s linear,
+            clip-path .72s cubic-bezier(.22, 1, .36, 1);
+          will-change: top, left, transform, opacity, clip-path;
+        }
+
+        @media (orientation: landscape) {
+          .gc-explore-stack > [data-gc-explore-tab].gc-explore-pending {
+            transform: translate3d(0, 100%, 0);
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .gc-explore-stack.gc-stack-animating > ._2680ad._0ca877,
+          .gc-explore-stack.gc-stack-animating > [data-gc-explore-tab] {
+            transition-duration: .01ms;
+          }
+
+          .greentech-brandbook-launch-loader__mark {
+            animation-duration: 1.8s;
+          }
         }
 
         @media (min-width: 1921px) {
@@ -818,23 +1225,36 @@ export default function App() {
         }
       `}</style>
 
-      {ENABLE_BRANDBOOK_TRANSITION && (
+      <div
+        className={`greentech-brandbook-launch-loader${brandbookLoaderVisible ? ' is-visible' : ''}`}
+        role="status"
+        aria-live="polite"
+        aria-hidden={!brandbookLoaderVisible}
+      >
+        <span className="greentech-brandbook-launch-loader__mark" aria-hidden="true" />
+        <span className="greentech-brandbook-launch-loader__label">
+          {wrapperCopy.brandbook.loadingLabel || 'Pregatim povestea'}
+        </span>
+      </div>
+
+      {ENABLE_PREPARED_BRANDBOOK_FRAME && !useStandaloneBrandbook && (
         <section
           ref={brandbookSectionElement}
-          className={`greentech-brandbook-section${sectionPresent ? ' is-present' : ''}${sectionInteractive ? ' is-interactive' : ''}`}
+          className={`greentech-brandbook-section${sectionPresent ? ' is-present' : ''}${sectionInteractive ? ' is-interactive is-direct' : ''}`}
           aria-label={wrapperCopy.brandbook.ariaLabel}
           aria-hidden={!sectionInteractive}
+          inert={!sectionInteractive}
         >
-          {!useStandaloneBrandbook && (
-            <iframe
-              ref={brandbookFrameElement}
-              className="greentech-brandbook-frame"
-              src={sceneReady ? '/brandbook-section/?entry=connected' : undefined}
-              title={wrapperCopy.brandbook.frameTitle}
-              loading="eager"
-              allow="fullscreen"
-            />
-          )}
+          <iframe
+            ref={brandbookFrameElement}
+            className="greentech-brandbook-frame"
+            src={sceneReady
+              ? `/brandbook-section/?entry=connected&attempt=${brandbookFrameAttempt}`
+              : undefined}
+            title={wrapperCopy.brandbook.frameTitle}
+            loading="eager"
+            allow="fullscreen"
+          />
         </section>
       )}
     </>

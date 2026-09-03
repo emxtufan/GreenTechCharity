@@ -99,11 +99,42 @@ body,
   position: fixed;
   inset: 0;
   z-index: 10000;
+  display: grid;
+  place-content: center;
   visibility: hidden;
   opacity: 0;
   pointer-events: none;
+  color: var(--bb-ink);
   background: var(--brandbook-cream);
   transition: opacity 120ms linear, visibility 0s linear 120ms;
+}
+
+.brandbook-entry-loader {
+  display: grid;
+  justify-items: center;
+  gap: 1rem;
+}
+
+.brandbook-entry-loader__mark {
+  width: 2.75rem;
+  aspect-ratio: 1;
+  border: 1px solid rgba(31, 58, 39, .22);
+  border-top-color: #64a045;
+  border-right-color: #64a045;
+  border-radius: 50%;
+  animation: bb-entry-loader-spin .9s linear infinite;
+}
+
+.brandbook-entry-loader__label {
+  font-family: var(--brandbook-text);
+  font-size: .68rem;
+  font-weight: 600;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+@keyframes bb-entry-loader-spin {
+  to { transform: rotate(1turn); }
 }
 
 html.bb-entry-pending .brandbook-entry-gate {
@@ -115,6 +146,13 @@ html.bb-entry-pending .brandbook-entry-gate {
 html.bb-entry-ready .brandbook-entry-gate {
   visibility: hidden;
   opacity: 0;
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brandbook-entry-loader__mark {
+    animation-duration: 1.8s;
+  }
 }
 
 /* The original stage toggles this inline during its final cover transition. */

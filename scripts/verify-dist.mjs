@@ -159,6 +159,8 @@ async function main() {
   assert(assetScripts.length > 0, 'Lipseste chunk-ul assets/greencube-runtime-*.js.');
   const runtimeSources = await Promise.all(assetScripts.map((filePath) => readFile(filePath, 'utf8')));
   const combinedRuntime = runtimeSources.join('\n');
+  const compactRuntime = combinedRuntime.replace(/\s+/g, '');
+  const compactWorker = stageWorker.replace(/\s+/g, '');
 
   for (const {versionedModelUrl} of modelResults) {
     const runtimeHasVersion = runtimeSources.some((source) => source.includes(versionedModelUrl));
@@ -166,25 +168,25 @@ async function main() {
   }
 
   assert(
-    combinedRuntime.includes('powerPreference: "high-performance", antialias: true'),
+    /powerPreference:["']high-performance["'],antialias:(?:true|!0)/.test(compactRuntime),
     'Chunk-ul greencube-runtime nu pastreaza antialiasingul original.',
   );
   assert(
-    stageWorker.includes('powerPreference: "high-performance", antialias: true'),
+    /powerPreference:["']high-performance["'],antialias:(?:true|!0)/.test(compactWorker),
     'stage-worker.js nu pastreaza antialiasingul original.',
   );
   assert(
-    combinedRuntime.includes('Math.min(window.devicePixelRatio, 2)'),
+    compactRuntime.includes('Math.min(window.devicePixelRatio,2)'),
     'Chunk-ul greencube-runtime nu foloseste DPR-ul original, limitat la 2.',
   );
   assert(
-    combinedRuntime.includes('this.hasOffscreen = kh()'),
+    /this\.hasOffscreen=[A-Za-z_$][\w$]*\(\)/.test(compactRuntime),
     'Chunk-ul greencube-runtime nu mai detecteaza automat OffscreenCanvas.',
   );
   assert(
-    /\.to\(\{\s*scroll:\s*0\.5\s*\},\s*4e3\)/.test(combinedRuntime) &&
-      /this\.autoScroll\s*&&\s*\(this\.scrollTarget\s*\+=\s*t\s*\*\s*0\.2\)/.test(combinedRuntime) &&
-      !/\.to\(\{\s*scroll:\s*0\.5\s*\},\s*2e3\)/.test(combinedRuntime),
+    /\.to\(\{scroll:(?:0?\.5)\},4e3\)/.test(compactRuntime) &&
+      /this\.autoScroll&&\(this\.scrollTarget\+=[A-Za-z_$][\w$]*\*(?:0?\.2)\)/.test(compactRuntime) &&
+      !/\.to\(\{scroll:(?:0?\.5)\},2e3\)/.test(compactRuntime),
     'Chunk-ul greencube-runtime nu separa norii originali de zoomul final 2x.',
   );
   assert(
