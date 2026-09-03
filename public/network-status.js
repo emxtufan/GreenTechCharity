@@ -4,37 +4,9 @@
   if (window.__GREENTECH_NETWORK_STATUS_INSTALLED__) return;
   window.__GREENTECH_NETWORK_STATUS_INSTALLED__ = true;
 
-  var connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-  var pageKind = document.body && document.body.dataset.bbContentPage === 'brandbook'
-    ? 'brandbook'
-    : 'main';
-  var startedAt = performance.now();
-  var lastProgressAt = startedAt;
-  var inferredSlow = false;
-  var inferredDelay = false;
   var currentState = '';
-  var recoveryTimer = 0;
-  var stallTimer = 0;
   var notice;
   var message;
-
-  function readNetworkHint() {
-    if (!connection) return {definite: false, possible: false};
-    var effectiveType = String(connection.effectiveType || '').toLowerCase();
-    var downlink = Number(connection.downlink);
-    var rtt = Number(connection.rtt);
-    var definite = Boolean(
-      connection.saveData ||
-      effectiveType === 'slow-2g' ||
-      effectiveType === '2g'
-    );
-    var possible = Boolean(
-      effectiveType === '3g' ||
-      (Number.isFinite(downlink) && downlink > 0 && downlink <= 1.5) ||
-      (Number.isFinite(rtt) && rtt >= 300)
-    );
-    return {definite: definite, possible: possible};
-  }
 
   function ensureNotice() {
     if (notice && notice.isConnected) return notice;
@@ -64,102 +36,30 @@
     return notice;
   }
 
-  function copyFor(state) {
-    if (state === 'offline') {
-      return 'Fara conexiune la internet';
-    }
-    if (state === 'delayed') return 'Incarcarea dureaza mai mult';
-    return 'Conexiune slaba la internet';
-  }
-
-  function show(state) {
-    window.clearTimeout(recoveryTimer);
-    currentState = state;
+  function showOffline() {
+    if (currentState === 'offline') return;
+    currentState = 'offline';
     var element = ensureNotice();
-    element.dataset.state = state;
-    message.textContent = copyFor(state);
+    element.dataset.state = 'offline';
+    message.textContent = 'Fara conexiune la internet';
     element.classList.add('is-visible');
   }
 
-  function hideSoon() {
-    window.clearTimeout(recoveryTimer);
-    recoveryTimer = window.setTimeout(function () {
-      currentState = '';
-      notice && notice.classList.remove('is-visible');
-    }, 3500);
+  function hideNotice() {
+    currentState = '';
+    notice && notice.classList.remove('is-visible');
   }
 
   function evaluateConnection() {
     if (!navigator.onLine) {
-      show('offline');
+      showOffline();
       return;
     }
-    var hint = readNetworkHint();
-    if (hint.definite || hint.possible || inferredSlow) {
-      show('slow');
-      return;
-    }
-    if (inferredDelay) {
-      show('delayed');
-      return;
-    }
-    if (currentState) hideSoon();
-  }
-
-  function markProgress() {
-    lastProgressAt = performance.now();
-  }
-
-  function markReady() {
-    inferredSlow = false;
-    inferredDelay = false;
-    markProgress();
-    evaluateConnection();
-  }
-
-  function armStallCheck() {
-    window.clearInterval(stallTimer);
-    stallTimer = window.setInterval(function () {
-      var now = performance.now();
-      var waitingForMain = pageKind === 'main' && !window.__GREENTECH_STAGE_READY__;
-      var waitingForBrandbook = pageKind === 'brandbook' &&
-        document.documentElement.dataset.bbRuntimeReady !== 'true';
-      var waiting = waitingForMain || waitingForBrandbook;
-      var hint = readNetworkHint();
-      var confirmedByDuration = hint.possible && now - startedAt >= 4500;
-      var confirmedByStall = now - lastProgressAt >= 8000 && now - startedAt >= 8000;
-      if (waiting && (confirmedByDuration || confirmedByStall)) {
-        inferredSlow = confirmedByDuration;
-        inferredDelay = !confirmedByDuration && confirmedByStall;
-        evaluateConnection();
-      }
-    }, 2000);
+    hideNotice();
   }
 
   window.addEventListener('offline', evaluateConnection);
-  window.addEventListener('online', function () {
-    inferredSlow = false;
-    inferredDelay = false;
-    markProgress();
-    evaluateConnection();
-  });
-  if (connection && typeof connection.addEventListener === 'function') {
-    connection.addEventListener('change', evaluateConnection);
-  }
-
-  [
-    'greencube:stage-progress',
-    'greentech:brandbook-warmup',
-    'greentech-content-ready',
-    'greentech:brandbook-deferred-progress'
-  ].forEach(function (eventName) {
-    window.addEventListener(eventName, markProgress);
-  });
-  ['greencube:stage-ready', 'greencube:stage-visible', 'greentech:brandbook-ready']
-    .forEach(function (eventName) {
-      window.addEventListener(eventName, markReady);
-    });
+  window.addEventListener('online', evaluateConnection);
 
   evaluateConnection();
-  armStallCheck();
 })();

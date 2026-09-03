@@ -26,6 +26,9 @@
     const stageZeroPrimary = 'assets/image/stage0/s0_o.webp';
     const stageZeroSecondary = 'assets/image/stage0/s0_o_s.webp';
     const transparentPlaceholder = 'assets/image/stage0/transparent.png';
+    const priorityDeferredTexturePaths = new Set([
+      'assets/image/ring1.webp'
+    ]);
     const connectedEntry = new URLSearchParams(window.location.search).get('entry') === 'connected';
     const entryTexturePaths = new Set([
       'assets/image/bg.webp',
@@ -84,7 +87,9 @@
 
     function startDeferredTextureLoading(manager) {
       if (manager.__greentechDeferredStarted) return;
-      const paths = manager.__greentechDeferredTextures || [];
+      const paths = (manager.__greentechDeferredTextures || []).slice().sort(function (left, right) {
+        return Number(priorityDeferredTexturePaths.has(right)) - Number(priorityDeferredTexturePaths.has(left));
+      });
       if (!paths.length) return;
 
       manager.__greentechDeferredStarted = true;
@@ -98,31 +103,51 @@
         const texture = manager._texMap[path];
         const image = new Image();
         image.decoding = 'async';
-        image.fetchPriority = 'low';
+        image.fetchPriority = priorityDeferredTexturePaths.has(path) ? 'high' : 'low';
 
-        let settled = false;
-        const timeout = window.setTimeout(function () { finish(false); }, 60000);
-        const finish = function (loaded) {
-          if (settled) return;
-          settled = true;
+        let queueAdvanced = false;
+        let textureApplied = false;
+        const advanceQueue = function () {
+          if (queueAdvanced) return;
+          queueAdvanced = true;
           window.clearTimeout(timeout);
-          if (loaded && texture) {
-            texture.image = image;
-            texture.needsUpdate = true;
-          }
           completed += 1;
           window.dispatchEvent(new CustomEvent('greentech:brandbook-deferred-progress', {
             detail: {completed: completed, total: paths.length, path: path}
           }));
           loadNext();
         };
+        const applyTexture = function () {
+          if (textureApplied || !texture) return;
+          textureApplied = true;
+          texture.image = image;
+          // WebGL2 pastreaza storage-ul initial de 1x1. Dispose forteaza
+          // Three.js sa-l realoce la dimensiunea imaginii descarcate.
+          texture.dispose();
+          texture.needsUpdate = true;
+          window.dispatchEvent(new CustomEvent('greentech:brandbook-texture-ready', {
+            detail: {path: path}
+          }));
+        };
+        // Timeout-ul elibereaza coada, dar nu abandoneaza imaginea. Daca un
+        // fisier mare termina ulterior pe 3G, textura este aplicata atunci.
+        const timeout = window.setTimeout(advanceQueue, 60000);
 
         image.addEventListener('load', function () {
           if (typeof image.decode === 'function') {
-            image.decode().then(function () { finish(true); }, function () { finish(true); });
-          } else finish(true);
+            image.decode().then(function () {
+              applyTexture();
+              advanceQueue();
+            }, function () {
+              applyTexture();
+              advanceQueue();
+            });
+          } else {
+            applyTexture();
+            advanceQueue();
+          }
         }, {once: true});
-        image.addEventListener('error', function () { finish(false); }, {once: true});
+        image.addEventListener('error', advanceQueue, {once: true});
         image.src = path;
       };
 
