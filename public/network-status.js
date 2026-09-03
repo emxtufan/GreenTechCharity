@@ -12,7 +12,6 @@
   var lastProgressAt = startedAt;
   var inferredSlow = false;
   var inferredDelay = false;
-  var dismissed = false;
   var currentState = '';
   var recoveryTimer = 0;
   var stallTimer = 0;
@@ -42,17 +41,11 @@
 
     var style = document.createElement('style');
     style.textContent = [
-      '.gc-network-notice{position:fixed;z-index:2147483000;left:max(14px,env(safe-area-inset-left));bottom:max(14px,env(safe-area-inset-bottom));display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:11px;box-sizing:border-box;width:min(430px,calc(100vw - 28px));padding:12px 12px 12px 14px;border:1px solid rgba(247,244,232,.22);border-radius:15px;color:#f7f4e8;background:rgba(20,54,35,.96);box-shadow:0 14px 45px rgba(8,32,20,.2);font-family:Helvetica,"Helvetica Neue",Arial,sans-serif;font-size:13px;line-height:1.4;letter-spacing:.005em;opacity:0;visibility:hidden;transform:translate3d(0,9px,0);transition:opacity .24s linear,transform .38s cubic-bezier(.22,1,.36,1),visibility 0s linear .38s;pointer-events:none;-webkit-font-smoothing:antialiased}',
+      '.gc-network-notice{position:fixed;z-index:2147483000;left:max(14px,env(safe-area-inset-left));bottom:max(14px,env(safe-area-inset-bottom));display:flex;align-items:center;gap:9px;box-sizing:border-box;width:max-content;max-width:calc(100vw - 28px);padding:9px 14px 9px 10px;border:1px solid rgba(247,244,232,.22);border-radius:999px;color:#f7f4e8;background:rgba(20,54,35,.96);box-shadow:0 10px 32px rgba(8,32,20,.18);font-family:Helvetica,"Helvetica Neue",Arial,sans-serif;font-size:13px;font-weight:500;line-height:1.25;letter-spacing:.005em;opacity:0;visibility:hidden;transform:translate3d(0,7px,0);transition:opacity .24s linear,transform .38s cubic-bezier(.22,1,.36,1),visibility 0s linear .38s;pointer-events:none;-webkit-font-smoothing:antialiased}',
       '.gc-network-notice.is-visible{opacity:1;visibility:visible;transform:none;transition-delay:0s;pointer-events:auto}',
-      '.gc-network-notice__signal{width:9px;height:9px;border-radius:50%;background:#c5ec4d;box-shadow:0 0 0 5px rgba(197,236,77,.13)}',
-      '.gc-network-notice[data-state="offline"] .gc-network-notice__signal{background:#f0a24a;box-shadow:0 0 0 5px rgba(240,162,74,.14)}',
-      '.gc-network-notice__message{margin:0}',
-      '.gc-network-notice__message strong{display:block;margin-bottom:1px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}',
-      '.gc-network-notice__close{position:relative;display:grid;place-items:center;width:31px;height:31px;margin:0;padding:0;border:1px solid rgba(247,244,232,.3);border-radius:50%;color:inherit;background:transparent;font:inherit;cursor:pointer}',
-      '.gc-network-notice__close:before,.gc-network-notice__close:after{content:"";position:absolute;width:11px;height:1px;background:currentColor}',
-      '.gc-network-notice__close:before{transform:rotate(45deg)}.gc-network-notice__close:after{transform:rotate(-45deg)}',
-      '.gc-network-notice__close:focus-visible{outline:2px solid #c5ec4d;outline-offset:2px}',
-      '@media(max-width:700px){.gc-network-notice{left:12px;right:12px;bottom:auto;top:max(104px,calc(env(safe-area-inset-top) + 88px));width:auto;padding:11px 10px 11px 13px;border-radius:13px;font-size:12px}}',
+      '.gc-network-notice__icon{display:block;flex:0 0 auto;width:25px;height:25px;object-fit:contain;filter:invert(1);opacity:.92}',
+      '.gc-network-notice__message{margin:0;white-space:nowrap}',
+      '@media(max-width:700px){.gc-network-notice{left:12px;bottom:auto;top:max(96px,calc(env(safe-area-inset-top) + 80px));max-width:calc(100vw - 24px);padding:8px 13px 8px 9px;font-size:12px}.gc-network-notice__icon{width:23px;height:23px}.gc-network-notice__message{white-space:normal}}',
       'body[data-bb-content-page="brandbook"] .gc-network-notice{top:max(14px,env(safe-area-inset-top));bottom:auto}',
       '@media(prefers-reduced-motion:reduce){.gc-network-notice{transition:opacity .15s linear,visibility 0s linear .15s;transform:none}.gc-network-notice.is-visible{transition-delay:0s}}'
     ].join('');
@@ -64,41 +57,27 @@
     notice.setAttribute('aria-live', 'polite');
     notice.setAttribute('aria-atomic', 'true');
     notice.innerHTML =
-      '<span class="gc-network-notice__signal" aria-hidden="true"></span>' +
-      '<p class="gc-network-notice__message"></p>' +
-      '<button class="gc-network-notice__close" type="button" aria-label="Inchide mesajul"></button>';
+      '<img class="gc-network-notice__icon" src="/no-wifi.png" alt="" aria-hidden="true">' +
+      '<p class="gc-network-notice__message"></p>';
     message = notice.querySelector('.gc-network-notice__message');
-    notice.querySelector('.gc-network-notice__close').addEventListener('click', function () {
-      dismissed = true;
-      notice.classList.remove('is-visible');
-    });
     document.body.appendChild(notice);
     return notice;
   }
 
   function copyFor(state) {
     if (state === 'offline') {
-      return '<strong>Conexiune intrerupta</strong>Pastreaza pagina deschisa. Continutul deja incarcat ramane disponibil.';
+      return 'Fara conexiune la internet';
     }
-    if (pageKind === 'brandbook') {
-      if (state === 'delayed') {
-        return '<strong>Incarcare prelungita</strong>Pregatim textele, ilustratiile si animatiile. Pastreaza pagina deschisa.';
-      }
-      return '<strong>Conexiune lenta</strong>Pregatim textele, ilustratiile si animatiile. Aceasta sectiune poate avea nevoie de mai mult timp.';
-    }
-    if (state === 'delayed') {
-      return '<strong>Incarcare prelungita</strong>Experienta 3D are nevoie de mai mult timp pe acest dispozitiv. Pastreaza pagina deschisa.';
-    }
-    return '<strong>Conexiune lenta</strong>Experienta 3D poate avea nevoie de mai mult timp, iar unele efecte vizuale pot rula in mod redus.';
+    if (state === 'delayed') return 'Incarcarea dureaza mai mult';
+    return 'Conexiune slaba la internet';
   }
 
   function show(state) {
     window.clearTimeout(recoveryTimer);
     currentState = state;
-    if (dismissed && state !== 'offline') return;
     var element = ensureNotice();
     element.dataset.state = state;
-    message.innerHTML = copyFor(state);
+    message.textContent = copyFor(state);
     element.classList.add('is-visible');
   }
 
@@ -159,7 +138,6 @@
 
   window.addEventListener('offline', evaluateConnection);
   window.addEventListener('online', function () {
-    dismissed = false;
     inferredSlow = false;
     inferredDelay = false;
     markProgress();

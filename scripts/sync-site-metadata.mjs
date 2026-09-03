@@ -147,7 +147,7 @@ function buildMetadata(config) {
   if (config.file === 'index.html') {
     lines.push(
       '<script>window.__GREENTECH_EARLY_START_REQUESTED__=!1;document.addEventListener("click",function(e){e.target instanceof Element&&e.target.closest("._34fe16")&&(window.__GREENTECH_EARLY_START_REQUESTED__=!0)},!0)</script>',
-      '<script defer src="/network-status.js?v=20260903-slow-network-2"></script>',
+      '<script defer src="/network-status.js?v=20260903-network-badge-1"></script>',
     );
   }
 
