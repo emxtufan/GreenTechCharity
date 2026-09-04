@@ -527,9 +527,24 @@ export default function App() {
 
     const tabsBeforeExplore = [...baseHeaderItems, legacyContactTab];
     const persistentTabs = [...tabsBeforeExplore, exploreTab];
-    const activeIndex = persistentTabs.findIndex(
+    // Cardurile sunt deschise de routerul intern, fara sa modifice URL-ul.
+    // Pastram indexul activ sincronizat cu evenimentul emis de acel router;
+    // altfel reveal-ul Exploreaza reutilizeaza starea initiala (de regula -1)
+    // si retrage eticheta, desi continutul cardului ramane deschis.
+    let activeIndex = persistentTabs.findIndex(
       (item) => item.dataset.pathname === window.location.pathname,
     );
+
+    const onActiveCardChange = (event: Event) => {
+      const activeCard = (
+        event as CustomEvent<{activeCard?: string | null}>
+      ).detail?.activeCard;
+
+      activeIndex = persistentTabs.findIndex(
+        (item) => item.dataset.pathname === activeCard,
+      );
+    };
+    window.addEventListener('greentech:active-card-change', onActiveCardChange);
 
     const layoutPersistentTabs = (includeExplore: boolean) => {
       const visibleCount = includeExplore ? persistentTabs.length : tabsBeforeExplore.length;
@@ -576,6 +591,14 @@ export default function App() {
     const revealExploreTab = () => {
       if (exploreRevealed) return;
       exploreRevealed = true;
+
+      // Daca un card este deschis, inchide-l prin acelasi router care ii
+      // controleaza continutul. Astfel eticheta si textul se retrag impreuna,
+      // inainte ca Exploreaza sa intre in stiva.
+      window.dispatchEvent(
+        new CustomEvent('greentech:card-request', {detail: {card: '/'}}),
+      );
+
       menu.classList.add('gc-stack-animating');
       menu.appendChild(exploreTab);
 
@@ -691,6 +714,7 @@ export default function App() {
 
     return () => {
       window.removeEventListener('pageshow', onPageShow);
+      window.removeEventListener('greentech:active-card-change', onActiveCardChange);
       document.removeEventListener('click', onExploreClick, true);
       cameraPhaseObserver.disconnect();
       window.cancelAnimationFrame(revealFrame);
