@@ -251,11 +251,25 @@ export async function createSubmission(application, fingerprint) {
       notes: '',
       source_page: application.sourcePage || '',
       request_hash: fingerprint || '',
+      email_status: 'pending',
+      email_error: '',
       created_at: now.toISOString(),
       updated_at: now.toISOString()
     };
     items.push(record);
     return publicRecord(record);
+  });
+}
+
+export async function updateSubmissionEmailStatus(id, status, errorCode = '') {
+  return mutateStore((items) => {
+    const item = items.find((candidate) => candidate.id === id);
+    if (!item) return null;
+    item.email_status = status === 'sent' ? 'sent' : 'failed';
+    item.email_error = status === 'sent' ? '' : String(errorCode || 'SMTP_SEND_FAILED').slice(0, 80);
+    item.email_updated_at = new Date().toISOString();
+    item.updated_at = item.email_updated_at;
+    return publicRecord(item);
   });
 }
 

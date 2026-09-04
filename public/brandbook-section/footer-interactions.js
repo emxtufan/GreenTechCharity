@@ -492,7 +492,9 @@
       const controller = new AbortController();
       activeRequestController?.abort();
       activeRequestController = controller;
-      const timeout = window.setTimeout(function () { controller.abort(); }, 12000);
+      // SMTP este confirmat de server inainte de raspuns; conexiunile mobile
+      // lente au nevoie de o fereastra mai generoasa decat vechiul timeout.
+      const timeout = window.setTimeout(function () { controller.abort(); }, 30000);
       try {
         const response = await fetch(endpoint, {
           method: 'POST',

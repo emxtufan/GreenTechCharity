@@ -21,6 +21,31 @@ privat pe server, configurat prin `SUBMISSIONS_FILE`.
      recomandata este `storage/form-submissions.json`;
    - `PORT` si `HOST`: portul si interfata pe care asculta serverul Node.
 
+### Notificari Gmail SMTP
+
+Fiecare formular valid este salvat mai intai in fisierul privat si apoi trimis
+prin SMTP. Completeaza in `.env` variabilele `SMTP_HOST`, `SMTP_PORT`,
+`SMTP_SECURE`, `SMTP_REQUIRE_TLS`, `SMTP_USER`, `SMTP_PASSWORD`,
+`SMTP_FROM_NAME`, `SMTP_FROM_EMAIL` si `SMTP_TO` din `.env.example`.
+
+Pentru `aigreentech1@gmail.com`, activeaza verificarea in doi pasi si genereaza
+o **Google App Password**. Pune parola de aplicatie in `SMTP_PASSWORD`; nu folosi
+parola obisnuita a contului Gmail. Expeditorul ramane contul autentificat, iar
+adresa completata de solicitant este setata automat ca `Reply-To`.
+
+Configuratia solicitata foloseste `smtp.gmail.com`, portul `25` si STARTTLS.
+Daca furnizorul VPS blocheaza traficul SMTP pe portul 25, schimba numai
+`SMTP_PORT=587`; `SMTP_SECURE=false` si `SMTP_REQUIRE_TLS=true` raman valabile.
+
+Poti verifica fara a expune secretele:
+
+```bash
+curl -s http://127.0.0.1:3002/healthz
+```
+
+Raspunsul trebuie sa contina `"smtpConfigured":true`. Livrarea reala trebuie
+confirmata prin trimiterea unui formular de test si verificarea inboxului.
+
 Fisierul `.env` este exclus din Git. Nu introduce parola sau secretele in
 HTML, JavaScript public ori intr-un commit.
 

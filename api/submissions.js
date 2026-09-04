@@ -5,8 +5,10 @@ import {
   normaliseApplication,
   parseBody,
   requestFingerprint,
-  serverConfig
+  serverConfig,
+  updateSubmissionEmailStatus
 } from './_lib.js';
+import {sendSubmissionEmail, smtpIsConfigured} from './_mailer.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -34,10 +36,21 @@ export default async function handler(req, res) {
   if (application.error) {
     return json(res, 400, {error: application.error});
   }
+  if (!smtpIsConfigured()) {
+    return json(res, 503, {error: 'Serviciul de e-mail nu este configurat.'});
+  }
 
   try {
     const saved = await createSubmission(application, requestFingerprint(req));
-    return json(res, 201, {id: saved.reference || saved.id});
+    try {
+      const delivery = await sendSubmissionEmail(application, saved);
+      await updateSubmissionEmailStatus(saved.id, 'sent');
+      return json(res, 201, {id: saved.reference || saved.id, emailSent: true, messageId: delivery.messageId});
+    } catch (emailError) {
+      await updateSubmissionEmailStatus(saved.id, 'failed', emailError?.code);
+      console.error('Submission email failed', {reference: saved.reference, code: emailError?.code || 'SMTP_SEND_FAILED'});
+      return json(res, 201, {id: saved.reference || saved.id, emailSent: false});
+    }
   } catch (error) {
     if (error?.code === 'RATE_LIMIT_EXCEEDED') {
       return json(res, 429, {error: 'Ai trimis prea multe cereri. Incearca din nou mai tarziu.'});

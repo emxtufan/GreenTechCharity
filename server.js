@@ -8,6 +8,7 @@ import {fileURLToPath} from 'node:url';
 
 import adminHandler from './api/admin.js';
 import submissionsHandler from './api/submissions.js';
+import {smtpIsConfigured} from './api/_mailer.js';
 
 const projectRoot = path.dirname(fileURLToPath(import.meta.url));
 const production = process.argv.includes('--production') || (
@@ -31,7 +32,7 @@ app.use(express.json({limit: '64kb'}));
 
 app.get('/healthz', (_req, res) => {
   res.setHeader('Cache-Control', 'no-store, max-age=0');
-  res.status(200).json({status: 'ok', service: 'greentech-charity'});
+  res.status(200).json({status: 'ok', service: 'greentech-charity', smtpConfigured: smtpIsConfigured()});
 });
 
 app.use('/api', (_req, res, next) => {

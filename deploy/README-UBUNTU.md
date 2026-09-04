@@ -54,6 +54,12 @@ sudoedit /etc/greentech-charity/greentech-charity.env
 
 Nu salva credentiale in repo, in `dist/`, in unitatea systemd sau in configuratia Nginx. `SUBMISSIONS_FILE` trebuie sa ramana o cale absoluta sub `/var/lib/greentech-charity/`.
 
+Completeaza si blocul `SMTP_*` din fisierul de mediu. Pentru contul Gmail se
+foloseste o Google App Password, nu parola normala. Configuratia initiala este
+`smtp.gmail.com:25` cu STARTTLS; daca reteaua VPS blocheaza portul 25, foloseste
+`SMTP_PORT=587`. Dupa restart, `/healthz` trebuie sa raporteze
+`"smtpConfigured":true`, apoi trimite un formular real de test.
+
 Serviciul trebuie sa aiba o singura instanta. Coada de scrieri in fisier este locala procesului; PM2 cluster sau mai multe replici care folosesc acelasi JSON nu sunt acceptate.
 
 ## 4. TLS la origin
